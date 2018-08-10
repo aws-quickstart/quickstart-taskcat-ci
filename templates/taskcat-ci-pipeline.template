@@ -1,0 +1,267 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "Creates Pipeline and required resources.",
+  "Resources" : {
+    "CodePipeline" : {
+      "Type" : "AWS::CodePipeline::Pipeline",
+      "Properties" : {
+        "ArtifactStore" : {
+          "Type" : "S3",
+          "Location" : {
+            "Ref" : "ArtifactBucket"
+          }
+        },
+        "RoleArn" : {
+          "Fn::GetAtt": [
+                "CodePipelineServiceRole",
+                "Arn"
+            ]
+        },
+        "Stages" : [ {
+          "Name" : "Source",
+          "Actions" : [ {
+            "Name" : "GitHub",
+            "InputArtifacts" : [ ],
+            "ActionTypeId" : {
+              "Category" : "Source",
+              "Owner" : "ThirdParty",
+              "Version" : "1",
+              "Provider" : "GitHub"
+            },
+            "OutputArtifacts" : [ {
+              "Name" : "Source"
+            } ],
+            "Configuration" : {
+              "Owner" : {
+                "Ref" : "GitHubUser"
+              },
+              "Repo" : {
+                "Ref" : "GitHubRepoName"
+              },
+              "Branch" : {
+                "Ref" : "SourceRepoBranch"
+              },
+              "OAuthToken" : {
+                "Ref" : "GitHubOAuthToken"
+              }
+            },
+            "RunOrder" : 1
+          } ]
+        },
+        {
+          "Name" : "Build",
+          "Actions" : [ {
+            "Name" : "CodeBuild",
+            "InputArtifacts" : [ {
+              "Name" : "Source"
+            } ],
+            "ActionTypeId" : {
+              "Category" : "Build",
+              "Owner" : "AWS",
+              "Version" : "1",
+              "Provider" : "CodeBuild"
+            },
+            "OutputArtifacts" : [ ],
+            "Configuration" : {
+              "ProjectName": { "Ref" : "CodeBuild"}
+            },
+            "RunOrder" : 2
+          } ]
+        } ]
+      }
+    },
+    "CodeBuild": {
+      	"Type": "AWS::CodeBuild::Project",
+        "Properties": {
+            "Name": {
+                "Ref": "ProjectName"
+            },
+            "Description": { "Fn::Sub" : "Submit build jobs for ${ProjectName} as part of CI/CD pipeline" },
+            "ServiceRole": {
+                "Fn::GetAtt": [
+                    "CodeBuildServiceRole",
+                    "Arn"
+                ]
+            },
+            "Artifacts": {
+                "Type": "CODEPIPELINE"
+            },
+            "Environment": {
+                "Type": "LINUX_CONTAINER",
+                "ComputeType": "BUILD_GENERAL1_SMALL",
+                "Image": "aws/codebuild/python:3.6.5",
+                "EnvironmentVariables": [
+                  {
+                    "Name" : "PROJECTNAME",
+                    "Value" : { "Fn::Sub" : "${ProjectName}"}
+                  }
+                ]
+            },
+            "Source": {
+                "Type": "CODEPIPELINE"
+            }
+        }
+    },
+    "ArtifactBucket" : {
+      "Type" : "AWS::S3::Bucket",
+      "Properties" : {
+        "AccessControl" : "Private",
+        "LifecycleConfiguration" : {
+          "Rules" : [ {
+            "NoncurrentVersionExpirationInDays" : 30,
+            "Status" : "Enabled"
+          } ]
+        },
+        "VersioningConfiguration" : {
+          "Status" : "Enabled"
+        }
+      }
+    },
+    "CodeBuildServiceRole" : {
+      "Type" : "AWS::IAM::Role",
+      "Properties" : {
+        "AssumeRolePolicyDocument" : {
+          "Version" : "2012-10-17",
+          "Statement" : [ {
+            "Sid" : "",
+            "Effect" : "Allow",
+            "Principal" : {
+              "Service" : "codebuild.amazonaws.com"
+            },
+            "Action" : "sts:AssumeRole"
+          } ]
+        },
+        "Path" : "/",
+        "Policies" : [ {
+          "PolicyName" : { "Fn::Sub" : "${ProjectName}-CICD-CodeBuildService-${AWS::Region}" },
+          "PolicyDocument" : {
+            "Version" : "2012-10-17",
+            "Statement" : [ {
+              "Action" : [ "s3:GetObject", "s3:GetObjectVersion", "s3:GetBucketVersioning", "s3:PutObject" ],
+              "Resource" : [ {
+                "Fn::Sub" : "arn:aws:s3:::${ArtifactBucket}"
+              }, {
+                "Fn::Sub" : "arn:aws:s3:::${ArtifactBucket}/*"
+              } ],
+              "Effect" : "Allow"
+            }, {
+              "Action" : [ "cloudformation:CreateStack", "cloudformation:DeleteStack", "cloudformation:DescribeStacks", "cloudformation:UpdateStack", "cloudformation:CreateChangeSet", "cloudformation:DeleteChangeSet", "cloudformation:DescribeChangeSet", "cloudformation:ExecuteChangeSet", "cloudformation:SetStackPolicy", "cloudformation:ValidateTemplate", "iam:PassRole" ],
+              "Resource" : "*",
+              "Effect" : "Allow"
+            }, {
+              "Action" : [ "logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents" ],
+              "Resource" : "*",
+              "Effect" : "Allow"
+            }, {
+              "Action" : [ "ssm:GetParameters" ],
+              "Resource" : "*",
+              "Effect" : "Allow"
+            } ]
+          }
+        } ]
+      }
+    },
+    "CodePipelineServiceRole" : {
+      "Type" : "AWS::IAM::Role",
+      "Properties" : {
+        "AssumeRolePolicyDocument" : {
+          "Version" : "2012-10-17",
+          "Statement" : [ {
+            "Sid" : "",
+            "Effect" : "Allow",
+            "Principal" : {
+              "Service" : "codepipeline.amazonaws.com"
+            },
+            "Action" : "sts:AssumeRole"
+          } ]
+        },
+        "Path" : "/",
+        "Policies" : [ {
+          "PolicyName" : { "Fn::Sub" : "${ProjectName}-CICD-CodePipelineService-${AWS::Region}" },
+          "PolicyDocument" : {
+            "Version" : "2012-10-17",
+            "Statement" : [ {
+              "Action" : [ "s3:GetObject", "s3:GetObjectVersion", "s3:GetBucketVersioning", "s3:PutObject" ],
+              "Resource" : [ {
+                "Fn::Sub" : "arn:aws:s3:::${ArtifactBucket}"
+              }, {
+                "Fn::Sub" : "arn:aws:s3:::${ArtifactBucket}/*"
+              } ],
+              "Effect" : "Allow"
+            }, {
+              "Action" : [ "cloudformation:CreateStack", "cloudformation:DeleteStack", "cloudformation:DescribeStacks", "cloudformation:UpdateStack", "cloudformation:CreateChangeSet", "cloudformation:DeleteChangeSet", "cloudformation:DescribeChangeSet", "cloudformation:ExecuteChangeSet", "cloudformation:SetStackPolicy", "cloudformation:ValidateTemplate", "iam:PassRole" ],
+              "Resource" : "*",
+              "Effect" : "Allow"
+            }, {
+              "Action" : [ "codebuild:BatchGetBuilds", "codebuild:StartBuild" ],
+              "Resource" : "*",
+              "Effect" : "Allow"
+            } ]
+          }
+        } ]
+      }
+    }
+  },
+  "Parameters" : {
+    "GitHubUser" : {
+      "Description" : "Enter GitHub username of the repository owner",
+      "Type" : "String"
+    },
+    "GitHubRepoName" : {
+      "Description" : "Enter the repository name that should be monitored for changes",
+      "Type" : "String"
+    },
+    "SourceRepoBranch" : {
+      "Description" : "Enter the GitHub branch to monitored",
+      "Type" : "String"
+    },
+    "GitHubOAuthToken" : {
+      "Description" : "Create a token with 'repo' and 'admin:repo_hook' permissions here https://github.com/settings/tokens",
+      "Type" : "String"
+    },
+    "ProjectName" : {
+      "Description" : "This will be used to name the code build project",
+      "Type" : "String"
+    }
+  },
+  "Metadata" : {
+    "AWS::CloudFormation::Interface" : {
+      "ParameterGroups" : [ {
+        "Label" : {
+          "default" : "GitHub Configuration"
+        },
+        "Parameters" : [ "GitHubUser", "GitHubRepoName", "SourceRepoBranch", "GitHubOAuthToken" ]
+      }, {
+        "Label" : {
+          "default" : "Project Configuration"
+        },
+        "Parameters" : [ "ProjectName" ]
+      } ],
+      "ParameterLabels" : {
+        "GitHubUser" : {
+          "default" : "Repository owner"
+        },
+        "GitHubRepoName" : {
+          "default" : "Repository name"
+        },
+        "SourceRepoBranch" : {
+          "default" : "Repository branch"
+        },
+        "GitHubOAuthToken" : {
+          "default" : "OAuth2 token"
+        },
+        "ProjectName": {
+          "default": "Project name"
+        }
+      }
+    }
+  },
+  "Outputs": {
+        "CodePipelineURL": {
+          	"Description" : "The URL of the created Pipeline",
+            "Value": {
+                "Fn::Sub": "https://${AWS::Region}.console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${CodePipeline}"
+            }
+        }
+    }
+}
