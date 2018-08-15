@@ -160,8 +160,7 @@ def lambda_handler(event, context):
         # Construct post data
         data = {
           'base': base_branch,
-          'head': head_branch,
-          'commit_message': 'CI Merge'
+          'head': head_branch
         }
         
         # Construct header
