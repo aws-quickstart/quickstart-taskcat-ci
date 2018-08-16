@@ -2,12 +2,34 @@
   "AWSTemplateFormatVersion" : "2010-09-09",
   "Description" : "Creates Pipeline and required resources.",
   "Resources" : {
+    "CopyLambdasStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties" : {
+        "TemplateURL": {
+                    "Fn::Sub": "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/copy-lambdas.template"
+        },
+        "Parameters": {
+          "BucketName": {
+            "Ref": "ArtifactBucket"
+          },
+          "QSS3BucketName": {
+            "Ref": "QSS3BucketName"
+          },
+          "QSS3KeyPrefix": {
+            "Ref": "QSS3KeyPrefix"
+          }
+        }
+      }
+    },
     "GitMergeLambda": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
                 "Code": {
                     "S3Bucket": {
-                        "Ref": "QSS3BucketName"
+                        "Fn::GetAtt": [
+                            "CopyLambdasStack",
+                            "Outputs.LambdaZipsBucket"
+                        ]
                     },
                     "S3Key": {
                         "Fn::Sub": "${QSS3KeyPrefix}functions/package/git_merge.zip"
@@ -250,7 +272,7 @@
         },
         "Source" : {
           "Type" : "CODEPIPELINE",
-          "BuildSpec" : "version: 0.2\n\nphases:\n  install:\n    commands:\n      - echo Entered the install phase...\n      - apt-get update -y\n      - git --version\n      - python --version\n      - which python\n      - pip3 --version\n      - pip3 install --upgrade pip\n      - ln -s /usr/local/bin/pip /usr/bin/pip\n      - pip --version\n  pre_build:\n    commands:\n      - echo Entered the pre_build phase...\n      - echo Current directory is $CODEBUILD_SRC_DIR\n      - ls\n      - export dirname=${PWD##*/}\n      - echo Directory name $dirname\n      - cd ..\n      - mv $dirname $PROJECTNAME\n      - ls\n      - echo Installing Taskcat using pip3...\n      - pip install taskcat\n      - echo Verifying Taskcat installation...\n      - taskcat\n      - echo Configuring aws cli...\n      - aws configure set aws_access_key_id $ACCESS_KEY_ID\n      - aws configure set aws_secret_access_key $SECRET_ACCESS_KEY\n      - aws configure set default.region us-west-2\n      - echo Verifying aws cli configuration\n      - cat ~/.aws/credentials\n      - cat ~/.aws/config\n  build:\n    commands:\n      - echo Entered the build phase...\n      - taskcat -v -n -c quickstart-test/ci/config.yml\n      - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done\n      - |\n        if $(grep -Fq \"CREATE_FAILED\" taskcat_outputs/index.html)\n        then\n          echo Quickstart FAILED!\n          exit 1\n        else\n          echo Quickstart Passed!\n          exit 0\n        fi\n"
+          "BuildSpec" : "version: 0.2\n\nphases:\n  install:\n    commands:\n      - echo Entered the install phase...\n      - apt-get update -y\n      - git --version\n      - python --version\n      - which python\n      - pip3 --version\n      - pip3 install --upgrade pip\n      - ln -s /usr/local/bin/pip /usr/bin/pip\n      - pip --version\n  pre_build:\n    commands:\n      - echo Entered the pre_build phase...\n      - echo Current directory is $CODEBUILD_SRC_DIR\n      - ls\n      - export dirname=${PWD##*/}\n      - echo Directory name $dirname\n      - cd ..\n      - mv $dirname $PROJECTNAME\n      - ls\n      - echo Installing Taskcat using pip3...\n      - pip install taskcat\n      - echo Verifying Taskcat installation...\n      - taskcat\n      - echo Configuring aws cli...\n      - aws configure set aws_access_key_id $ACCESS_KEY_ID\n      - aws configure set aws_secret_access_key $SECRET_ACCESS_KEY\n      - aws configure set default.region us-west-2\n      - echo Verifying aws cli configuration\n      - cat ~/.aws/credentials\n      - cat ~/.aws/config\n  build:\n    commands:\n      - echo Entered the build phase...\n      - taskcat -v -n -c $PROJECTNAME/ci/taskcat.yml\n      - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done\n      - |\n        if $(grep -Fq \"CREATE_FAILED\" taskcat_outputs/index.html)\n        then\n          echo Quickstart FAILED!\n          exit 1\n        else\n          echo Quickstart Passed!\n          exit 0\n        fi\n"
         }
       }
     },
@@ -390,7 +412,7 @@
       "Type" : "String"
     },
     "ProjectName" : {
-      "Description" : "This will be used to name the code build project",
+      "Description" : "Name of the Quick Start project, which is tested as part of the Pipeline.",
       "Type" : "String"
     },
     "QSS3BucketName" : {
