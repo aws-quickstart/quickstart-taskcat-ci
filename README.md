@@ -2,6 +2,7 @@
 
 ## Overview
 
+![Architecture Diagram](assets/Taskcat%20CI%20Quick%20Start%20architecture%20diagram.png)
 Create a CI/CD pipeline to test Quick Starts. This Quick Start uses following AWS services:
 - AWS CodePipeline
 - AWS CodeBuild
