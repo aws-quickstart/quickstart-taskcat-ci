@@ -171,11 +171,16 @@ def lambda_handler(event, context):
         
         # Submit request
         result = requests.post(merge_endpoint, data=json.dumps(data), headers=headers)
+        logger.debug(result)
         
         if result.status_code == requests.codes.created:
             # Merge completed successfully.
             logger.info('Merge completed successfully!')
             put_job_success(job_id, 'Merge complete!')
+        elif result.status_code == requests.codes.no_content:
+            # Merge not needed. Base already contains the head, nothing to merge.
+            logger.info('Nothing to merge!')
+            put_job_success(job_id, 'Nothing to merge!')
         else:
             # Merge failed.
             logger.error(str(result.raise_for_status()))
