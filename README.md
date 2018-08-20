@@ -14,24 +14,12 @@ The pipeline created by this Quick Start consist of 3 stages - Source, Build and
 
 ## Pre-requisites
 1. Github repository - Quick Start github repository which you want to use as a source for the CI/CD pipeline.
-1. Github token - Goto github (https://github.com/settings/tokens) to create an OAuth2 token. This is needed to merge branches via API.
+2. Github token - Goto github (https://github.com/settings/tokens) to create an OAuth2 token with following permissions - admin:repo_hook and repo. This is needed to merge branches via API.
 
 ## Steps to deploy
 1. Login to the AWS console and select a region where you want to deploy this Quick Start.
-2. Go to Systems Manager console, select Parameter store from the left navigation and create following 3 parameters.
- 1. Name: access_key_id
- 	Description: Access key required by Taskcat to launch CFN stack
- 	Type: SecureString
- 	KMS key source: My current account
- 	KMS Key ID: alias/aws/ssm
- 	Value: <access-key-id>
- 2. Name: secret_access_key
- 	Description: Secret access key required by Taskcat to launch CFN stack
- 	Type: SecureString
- 	KMS key source: My current account
- 	KMS Key ID: alias/aws/ssm
- 	Value: <secret-access-key>
- 3. Name: GITHUBTOKEN
+2. Create parameter in SSM Parameter store - Go to Systems Manager console, select Parameter store from the left navigation and create the following parameter. Currently, CloudFormation doesn't support creating SSM parameter with SecureString Type, therefore this manual step is needed.
+ 1. Name: GITHUBTOKEN
  	Description: Github token used by Lambda function to merge branches via API
  	Type: SecureString
  	KMS key source: My current account
