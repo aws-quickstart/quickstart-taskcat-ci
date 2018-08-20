@@ -22,17 +22,15 @@ phases:
       - pip install taskcat
       - echo Verifying Taskcat installation...
       - taskcat
-      - echo Configuring aws cli... #TODO remove access and secret and use iam role
-      - aws configure set aws_access_key_id $ACCESS_KEY_ID
-      - aws configure set aws_secret_access_key $SECRET_ACCESS_KEY
+      - echo Configuring aws cli...
       - aws configure set default.region us-west-2
   build:
     commands:
       - echo Entered the build phase...
-      - taskcat -c $PROJECTNAME/ci/taskcat.yml
+      - taskcat -c $PROJECTNAME/ci/taskcat.yml 2>&1 | tee taskcat_output.log
       - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done
       - |
-        if $(grep -Fq "CREATE_FAILED" taskcat_outputs/index.html)
+        if [ $(grep -Fq "CREATE_FAILED" taskcat_outputs/index.html) ] || [ $(grep -Fq "DELETE_FAILED" taskcat_output.log) ]
         then
           echo Quickstart FAILED!
           exit 1
@@ -42,4 +40,4 @@ phases:
         fi
 
 ## Single line version
-# "version: 0.2\n\nphases:\n  install:\n    commands:\n      - echo Entered the install phase...\n      - apt-get update -y\n      - pip3 install --upgrade pip\n      - ln -s /usr/local/bin/pip /usr/bin/pip\n  pre_build:\n    commands:\n      - echo Entered the pre_build phase...\n      - echo Current directory is $CODEBUILD_SRC_DIR\n      - ls\n      - export dirname=${PWD##*/}\n      - echo Directory name $dirname\n      - cd ..\n      - mv $dirname $PROJECTNAME\n      - ls\n      - echo Installing Taskcat using pip3...\n      - pip install taskcat\n      - echo Verifying Taskcat installation...\n      - taskcat\n      - echo Configuring aws cli...\n      - aws configure set aws_access_key_id $ACCESS_KEY_ID\n      - aws configure set aws_secret_access_key $SECRET_ACCESS_KEY\n      - aws configure set default.region us-west-2\n  build:\n    commands:\n      - echo Entered the build phase...\n      - taskcat -c $PROJECTNAME/ci/taskcat.yml\n      - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done\n      - |\n        if $(grep -Fq \"CREATE_FAILED\" taskcat_outputs/index.html)\n        then\n          echo Quickstart FAILED!\n          exit 1\n        else\n          echo Quickstart Passed!\n          exit 0\n        fi\n"
+# "version: 0.2\n\nphases:\n  install:\n    commands:\n      - echo Entered the install phase...\n      - apt-get update -y\n      - pip3 install --upgrade pip\n      - ln -s /usr/local/bin/pip /usr/bin/pip\n  pre_build:\n    commands:\n      - echo Entered the pre_build phase...\n      - echo Current directory is $CODEBUILD_SRC_DIR\n      - ls\n      - export dirname=${PWD##*/}\n      - echo Directory name $dirname\n      - cd ..\n      - mv $dirname $PROJECTNAME\n      - ls\n      - echo Installing Taskcat using pip3...\n      - pip install taskcat\n      - echo Verifying Taskcat installation...\n      - taskcat\n      - echo Configuring aws cli...\n      - aws configure set default.region us-west-2\n  build:\n    commands:\n      - echo Entered the build phase...\n      - taskcat -c $PROJECTNAME/ci/taskcat.yml 2>&1 | tee taskcat_output.log\n      - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done\n      - |\n        if [ $(grep -Fq "CREATE_FAILED" taskcat_outputs/index.html) ] || [ $(grep -Fq "DELETE_FAILED" taskcat_output.log) ]\n        then\n          echo Quickstart FAILED!\n          exit 1\n        else\n          echo Quickstart Passed!\n          exit 0\n        fi\n"
