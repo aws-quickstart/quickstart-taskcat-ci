@@ -243,7 +243,7 @@
       "Type" : "AWS::CodeBuild::Project",
       "Properties" : {
         "Description" : {
-          "Fn::Sub" : "Submit build jobs for ${ProjectName} as part of CI/CD pipeline"
+          "Fn::Sub" : "Submit build jobs for ${GitHubRepoName} as part of CI/CD pipeline"
         },
         "ServiceRole" : {
           "Fn::GetAtt" : [ "CodeBuildServiceRole", "Arn" ]
@@ -258,21 +258,18 @@
           "EnvironmentVariables" : [ {
             "Name" : "PROJECTNAME",
             "Value" : {
-              "Fn::Sub" : "${ProjectName}"
+              "Fn::Sub" : "${GitHubRepoName}"
             }
           }, {
-            "Name" : "ACCESS_KEY_ID",
-            "Value" : "access_key_id",
-            "Type" : "PARAMETER_STORE"
-          }, {
-            "Name" : "SECRET_ACCESS_KEY",
-            "Value" : "secret_access_key",
-            "Type" : "PARAMETER_STORE"
+            "Name" : "ARTIFACT_BUCKET",
+            "Value" : {
+              "Ref" : "ArtifactBucket"
+            }
           } ]
         },
         "Source" : {
           "Type" : "CODEPIPELINE",
-          "BuildSpec" : "version: 0.2\n\nphases:\n  install:\n    commands:\n      - echo Entered the install phase...\n      - apt-get update -y\n      - pip3 install --upgrade pip\n      - ln -s /usr/local/bin/pip /usr/bin/pip\n  pre_build:\n    commands:\n      - echo Entered the pre_build phase...\n      - echo Current directory is $CODEBUILD_SRC_DIR\n      - ls\n      - export dirname=${PWD##*/}\n      - echo Directory name $dirname\n      - cd ..\n      - mv $dirname $PROJECTNAME\n      - ls\n      - echo Installing Taskcat using pip3...\n      - pip install taskcat\n      - echo Verifying Taskcat installation...\n      - taskcat\n      - echo Configuring aws cli...\n      - aws configure set default.region us-west-2\n  build:\n    commands:\n      - echo Entered the build phase...\n      - taskcat -c $PROJECTNAME/ci/taskcat.yml 2>&1 | tee taskcat_output.log\n      - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done\n      - |\n        if [ $(grep -Fq \"CREATE_FAILED\" taskcat_outputs/index.html) ] || [ $(grep -Fq \"DELETE_FAILED\" taskcat_output.log) ]\n        then\n          echo Quickstart FAILED!\n          exit 1\n        else\n          echo Quickstart Passed!\n          exit 0\n        fi\n"
+          "BuildSpec" : "version: 0.2\n\nphases:\n  install:\n    commands:\n      - echo Entered the install phase...\n      - apt-get update -y\n      - sudo apt-get install zip gzip tar -y\n      - pip3 install --upgrade pip\n      - ln -s /usr/local/bin/pip /usr/bin/pip\n  pre_build:\n    commands:\n      - echo Entered the pre_build phase...\n      - echo Current directory is $CODEBUILD_SRC_DIR\n      - ls\n      - export dirname=${PWD##*/}\n      - echo Directory name $dirname\n      - cd ..\n      - mv $dirname $PROJECTNAME\n      - ls\n      - echo Installing Taskcat using pip3...\n      - pip install taskcat\n      - echo Verifying Taskcat installation...\n      - taskcat\n      - echo Configuring aws cli...\n      - aws configure set default.region us-west-2\n  build:\n    commands:\n      - echo Entered the build phase...\n      - taskcat -c $PROJECTNAME/ci/taskcat.yml\n      - ls -1 taskcat_outputs\n      - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done\n      - echo Zipping and uploading report to $ARTIFACT_BUCKET S3 bucket\n      - zip -r taskcat_report.zip taskcat_outputs\n      - aws s3 cp taskcat_report.zip s3://$ARTIFACT_BUCKET/taskcat_report.zip\n      - |\n        if $(grep -Fq \"CREATE_FAILED\" taskcat_outputs/index.html)\n        then\n          echo Quickstart FAILED!\n          exit 1\n        else\n          echo Quickstart Passed!\n          exit 0\n        fi\n"
         }
       }
     },
@@ -308,20 +305,12 @@
         "Path" : "/",
         "Policies" : [ {
           "PolicyName" : {
-            "Fn::Sub" : "${ProjectName}-CICD-CodeBuildService-${AWS::Region}"
+            "Fn::Sub" : "${GitHubRepoName}-CICD-CodeBuildService-${AWS::Region}"
           },
           "PolicyDocument" : {
             "Version" : "2012-10-17",
             "Statement" : [ {
-              "Action" : [ "s3:GetObject", "s3:GetObjectVersion", "s3:GetBucketVersioning", "s3:PutObject" ],
-              "Resource" : [ {
-                "Fn::Sub" : "arn:aws:s3:::${ArtifactBucket}"
-              }, {
-                "Fn::Sub" : "arn:aws:s3:::${ArtifactBucket}/*"
-              } ],
-              "Effect" : "Allow"
-            }, {
-              "Action" : [ "cloudformation:CreateStack", "cloudformation:DeleteStack", "cloudformation:DescribeStacks", "cloudformation:UpdateStack", "cloudformation:CreateChangeSet", "cloudformation:DeleteChangeSet", "cloudformation:DescribeChangeSet", "cloudformation:ExecuteChangeSet", "cloudformation:SetStackPolicy", "cloudformation:ValidateTemplate", "iam:PassRole" ],
+              "Action" : [ "cloudformation:CreateStack", "cloudformation:DeleteStack", "cloudformation:DescribeStacks", "cloudformation:UpdateStack", "cloudformation:CreateChangeSet", "cloudformation:DeleteChangeSet", "cloudformation:DescribeChangeSet", "cloudformation:ExecuteChangeSet", "cloudformation:SetStackPolicy", "cloudformation:ValidateTemplate","cloudformation:DescribeStackEvents", "iam:PassRole" ],
               "Resource" : "*",
               "Effect" : "Allow"
             }, {
@@ -330,6 +319,18 @@
               "Effect" : "Allow"
             }, {
               "Action" : [ "ssm:GetParameters" ],
+              "Resource" : "*",
+              "Effect" : "Allow"
+            }, {
+              "Action" : "iam:*",
+              "Resource" : "*",
+              "Effect" : "Allow"
+            }, {
+              "Action" : "ec2:*",
+              "Resource" : "*",
+              "Effect" : "Allow"
+            }, {
+              "Action" : "s3:*",
               "Resource" : "*",
               "Effect" : "Allow"
             }, {
@@ -358,7 +359,7 @@
         "Path" : "/",
         "Policies" : [ {
           "PolicyName" : {
-            "Fn::Sub" : "${ProjectName}-CICD-CodePipelineService-${AWS::Region}"
+            "Fn::Sub" : "${GitHubRepoName}-CICD-CodePipelineService-${AWS::Region}"
           },
           "PolicyDocument" : {
             "Version" : "2012-10-17",
@@ -415,10 +416,6 @@
       "Description" : "Create a token with 'repo' and 'admin:repo_hook' permissions here https://github.com/settings/tokens",
       "Type" : "String"
     },
-    "ProjectName" : {
-      "Description" : "Name of the Quick Start project, which is tested as part of the Pipeline.",
-      "Type" : "String"
-    },
     "QSS3BucketName" : {
       "AllowedPattern": "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
         "ConstraintDescription": "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
@@ -441,21 +438,16 @@
           "default" : "GitHub Configuration"
         },
         "Parameters" : [ "GitHubUser", "GitHubRepoName", "SourceRepoBranch", "ReleaseBranch","GitHubOAuthToken" ]
-      }, {
-        "Label" : {
-          "default" : "Project Configuration"
+      },
+      {
+        "Label": {
+            "default": "AWS Quick Start Configuration"
         },
-        "Parameters" : [ "ProjectName" ]
-      }, 
-    {
-                    "Label": {
-                        "default": "AWS Quick Start Configuration"
-                    },
-                    "Parameters": [
-                        "QSS3BucketName",
-                        "QSS3KeyPrefix"
-                    ]
-                } ],
+        "Parameters": [
+            "QSS3BucketName",
+            "QSS3KeyPrefix"
+        ]
+    } ],
       "ParameterLabels" : {
         "GitHubUser" : {
           "default" : "Repository owner"
@@ -471,9 +463,6 @@
         },
         "GitHubOAuthToken" : {
           "default" : "OAuth2 token"
-        },
-        "ProjectName" : {
-          "default" : "Project name"
         },
         "QSS3BucketName": {
             "default": "Quick Start S3 Bucket Name"

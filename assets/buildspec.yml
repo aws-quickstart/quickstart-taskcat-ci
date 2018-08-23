@@ -6,6 +6,7 @@ phases:
     commands:
       - echo Entered the install phase...
       - apt-get update -y
+      - sudo apt-get install zip gzip tar -y
       - pip3 install --upgrade pip
       - ln -s /usr/local/bin/pip /usr/bin/pip
   pre_build:
@@ -27,10 +28,14 @@ phases:
   build:
     commands:
       - echo Entered the build phase...
-      - taskcat -c $PROJECTNAME/ci/taskcat.yml 2>&1 | tee taskcat_output.log
+      - taskcat -c $PROJECTNAME/ci/taskcat.yml
+      - ls -1 taskcat_outputs
       - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done
+      - echo Zipping and uploading report to $ARTIFACT_BUCKET S3 bucket
+      - zip -r taskcat_report.zip taskcat_outputs
+      - aws s3 cp taskcat_report.zip s3://$ARTIFACT_BUCKET/taskcat_report.zip
       - |
-        if [ $(grep -Fq "CREATE_FAILED" taskcat_outputs/index.html) ] || [ $(grep -Fq "DELETE_FAILED" taskcat_output.log) ]
+        if $(grep -Fq "CREATE_FAILED" taskcat_outputs/index.html)
         then
           echo Quickstart FAILED!
           exit 1
@@ -40,4 +45,4 @@ phases:
         fi
 
 ## Single line version
-# "version: 0.2\n\nphases:\n  install:\n    commands:\n      - echo Entered the install phase...\n      - apt-get update -y\n      - pip3 install --upgrade pip\n      - ln -s /usr/local/bin/pip /usr/bin/pip\n  pre_build:\n    commands:\n      - echo Entered the pre_build phase...\n      - echo Current directory is $CODEBUILD_SRC_DIR\n      - ls\n      - export dirname=${PWD##*/}\n      - echo Directory name $dirname\n      - cd ..\n      - mv $dirname $PROJECTNAME\n      - ls\n      - echo Installing Taskcat using pip3...\n      - pip install taskcat\n      - echo Verifying Taskcat installation...\n      - taskcat\n      - echo Configuring aws cli...\n      - aws configure set default.region us-west-2\n  build:\n    commands:\n      - echo Entered the build phase...\n      - taskcat -c $PROJECTNAME/ci/taskcat.yml 2>&1 | tee taskcat_output.log\n      - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done\n      - |\n        if [ $(grep -Fq \"CREATE_FAILED\" taskcat_outputs/index.html) ] || [ $(grep -Fq \"DELETE_FAILED\" taskcat_output.log) ]\n        then\n          echo Quickstart FAILED!\n          exit 1\n        else\n          echo Quickstart Passed!\n          exit 0\n        fi\n"
+# "version: 0.2\n\nphases:\n  install:\n    commands:\n      - echo Entered the install phase...\n      - apt-get update -y\n      - sudo apt-get install zip gzip tar -y\n      - pip3 install --upgrade pip\n      - ln -s /usr/local/bin/pip /usr/bin/pip\n  pre_build:\n    commands:\n      - echo Entered the pre_build phase...\n      - echo Current directory is $CODEBUILD_SRC_DIR\n      - ls\n      - export dirname=${PWD##*/}\n      - echo Directory name $dirname\n      - cd ..\n      - mv $dirname $PROJECTNAME\n      - ls\n      - echo Installing Taskcat using pip3...\n      - pip install taskcat\n      - echo Verifying Taskcat installation...\n      - taskcat\n      - echo Configuring aws cli...\n      - aws configure set default.region us-west-2\n  build:\n    commands:\n      - echo Entered the build phase...\n      - taskcat -c $PROJECTNAME/ci/taskcat.yml\n      - ls -1 taskcat_outputs\n      - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done\n      - echo Zipping and uploading report to $ARTIFACT_BUCKET S3 bucket\n      - zip -r taskcat_report.zip taskcat_outputs\n      - aws s3 cp taskcat_report.zip s3://$ARTIFACT_BUCKET/taskcat_report.zip\n      - |\n        if $(grep -Fq \"CREATE_FAILED\" taskcat_outputs/index.html)\n        then\n          echo Quickstart FAILED!\n          exit 1\n        else\n          echo Quickstart Passed!\n          exit 0\n        fi\n"
