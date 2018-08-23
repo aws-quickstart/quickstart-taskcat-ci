@@ -303,43 +303,9 @@
           } ]
         },
         "Path" : "/",
-        "Policies" : [ {
-          "PolicyName" : {
-            "Fn::Sub" : "${GitHubRepoName}-CICD-CodeBuildService-${AWS::Region}"
-          },
-          "PolicyDocument" : {
-            "Version" : "2012-10-17",
-            "Statement" : [ {
-              "Action" : [ "cloudformation:CreateStack", "cloudformation:DeleteStack", "cloudformation:DescribeStacks", "cloudformation:UpdateStack", "cloudformation:CreateChangeSet", "cloudformation:DeleteChangeSet", "cloudformation:DescribeChangeSet", "cloudformation:ExecuteChangeSet", "cloudformation:SetStackPolicy", "cloudformation:ValidateTemplate","cloudformation:DescribeStackEvents", "iam:PassRole" ],
-              "Resource" : "*",
-              "Effect" : "Allow"
-            }, {
-              "Action" : [ "logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents" ],
-              "Resource" : "*",
-              "Effect" : "Allow"
-            }, {
-              "Action" : [ "ssm:GetParameters" ],
-              "Resource" : "*",
-              "Effect" : "Allow"
-            }, {
-              "Action" : "iam:*",
-              "Resource" : "*",
-              "Effect" : "Allow"
-            }, {
-              "Action" : "ec2:*",
-              "Resource" : "*",
-              "Effect" : "Allow"
-            }, {
-              "Action" : "s3:*",
-              "Resource" : "*",
-              "Effect" : "Allow"
-            }, {
-              "Action" : "*",
-              "Resource" : "*",
-              "Effect" : "Allow"
-            } ]
-          }
-        } ]
+        "ManagedPolicyArns" : [
+          "arn:aws:iam::aws:policy/AdministratorAccess"
+        ]
       }
     },
     "CodePipelineServiceRole" : {
