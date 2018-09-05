@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
-  "Description" : "Creates Pipeline and required resources.",
+  "Description" : "Creates Pipeline and required resources for TaskCat CI. License: Apache 2.0 (Please do not remove) September, 5, 2018 (qs-1ops82lkf)",
   "Resources" : {
     "CopyLambdasStack": {
       "Type": "AWS::CloudFormation::Stack",
