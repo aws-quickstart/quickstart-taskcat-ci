@@ -380,7 +380,8 @@
     },
     "GitHubOAuthToken" : {
       "Description" : "Create a token with 'repo' and 'admin:repo_hook' permissions here https://github.com/settings/tokens",
-      "Type" : "String"
+      "Type" : "String",
+      "NoEcho" : "true"
     },
     "QSS3BucketName" : {
       "AllowedPattern": "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
