@@ -1,0 +1,30 @@
+[
+  {
+    "ParameterKey": "GitHubUser",
+    "ParameterValue": "aws-quickstart"
+  },
+  {
+    "ParameterKey": "GitHubRepoName",
+    "ParameterValue": "github-repo-name"
+  },
+  {
+    "ParameterKey": "SourceRepoBranch",
+    "ParameterValue": "develop"
+  },
+  {
+    "ParameterKey": "ReleaseBranch",
+    "ParameterValue": "master"
+  },
+  {
+    "ParameterKey": "GitHubOAuthToken",
+    "ParameterValue": "github-token"
+  },
+  {
+    "ParameterKey": "QSS3BucketName",
+    "ParameterValue": "$[taskcat_autobucket]"
+  },
+  {
+    "ParameterKey": "QSS3KeyPrefix",
+    "ParameterValue": "quickstart-taskcat-ci/"
+  }
+]
