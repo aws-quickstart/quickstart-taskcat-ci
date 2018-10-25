@@ -23,6 +23,7 @@
     },
     "GitMergeLambda": {
             "Type": "AWS::Lambda::Function",
+            "DependsOn": "GitMergeRole",
             "Properties": {
                 "Code": {
                     "S3Bucket": {
