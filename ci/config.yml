@@ -19,9 +19,11 @@ global:
   reporting: true
  
 tests:
-  quickstart-taskcat-cit1:
-    parameter_input: quickstart-taskcat-ci-example-params1.json
-    template_file: quickstart-taskcat-ci-example1.template
-  quickstart-taskcat-cit2:
-    parameter_input: quickstart-taskcat-ci-example-params2.json
-    template_file: quickstart-taskcat-ci-example2.template
+  quickstart-taskcat-ci-test1:
+    parameter_input: input-params1.json
+    template_file: taskcat-ci-pipeline.template
+    regions:
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
