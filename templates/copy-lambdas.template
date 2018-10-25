@@ -23,6 +23,7 @@
     },
     "Resources": {
         "CopyObjects": {
+          	"DependsOn": "LambdaZipsBucket",
             "Properties": {
                 "ServiceToken": {
                     "Fn::GetAtt": [
@@ -203,6 +204,7 @@
                     }
                 ]
             },
+            "DependsOn": "LambdaZipsBucket",
             "Type": "AWS::IAM::Role"
         },
         "LambdaZipsBucket": {
@@ -226,6 +228,7 @@
                     ]
                 }
             },
+            "DependsOn": "CleanUpS3BucketFunction",
             "Type": "AWS::CloudFormation::CustomResource"
         },
         "CleanUpS3BucketFunction": {
@@ -332,6 +335,7 @@
                 "Runtime": "python2.7",
                 "Timeout": 240
             },
+            "DependsOn": "S3CleanUpRole",
             "Type": "AWS::Lambda::Function"
         },
         "S3CleanUpRole": {

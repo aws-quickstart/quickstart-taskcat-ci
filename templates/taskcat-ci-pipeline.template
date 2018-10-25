@@ -23,7 +23,10 @@
     },
     "GitMergeLambda": {
             "Type": "AWS::Lambda::Function",
-            "DependsOn": "GitMergeRole",
+            "DependsOn": [
+              "GitMergeRole",
+              "CopyLambdasStack"
+            ],
             "Properties": {
                 "Code": {
                     "S3Bucket": {
@@ -311,6 +314,9 @@
     },
     "CodePipelineServiceRole" : {
       "Type" : "AWS::IAM::Role",
+      "DependsOn" : [
+        "ArtifactBucket"
+      ],
       "Properties" : {
         "AssumeRolePolicyDocument" : {
           "Version" : "2012-10-17",
