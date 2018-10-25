@@ -23,7 +23,10 @@
     },
     "Resources": {
         "CopyObjects": {
-          	"DependsOn": "LambdaZipsBucket",
+          	"DependsOn": [
+             	"LambdaZipsBucket",
+              	"CopyObjectsFunction"
+           	],
             "Properties": {
                 "ServiceToken": {
                     "Fn::GetAtt": [
@@ -140,7 +143,9 @@
                 "Runtime": "python2.7",
                 "Timeout": 240
             },
-            "DependsOn": "CopyObjectsRole",
+            "DependsOn": [
+              "CopyObjectsRole"
+            ],
             "Type": "AWS::Lambda::Function"
         },
         "CopyObjectsRole": {
@@ -204,7 +209,9 @@
                     }
                 ]
             },
-            "DependsOn": "LambdaZipsBucket",
+            "DependsOn": [
+              	"LambdaZipsBucket"
+            ],
             "Type": "AWS::IAM::Role"
         },
         "LambdaZipsBucket": {
