@@ -1,29 +1,19 @@
 # quickstart-taskcat-ci
+## CI/CD Pipeline for AWS CloudFormation Templates Using TaskCat on the AWS Cloud
 
-## Overview
 
-![Architecture Diagram](assets/Taskcat%20CI%20Quick%20Start%20architecture%20diagram.png)
-Create a CI/CD pipeline to test Quick Starts. This Quick Start uses following AWS services:
-- AWS CodePipeline
-- AWS CodeBuild
-- Amazon S3
-- AWS Lambda
-- AWS CloudFormation
+This Quick Start deploys a continuous integration and continuous delivery (CI/CD) pipeline on the Amazon Web Services (AWS) Cloud for automatically testing AWS CloudFormation templates from a GitHub repository. 
 
-The pipeline created by this Quick Start consist of 3 stages - Source, Build and Deploy. Source stage is integrated with Github repository which is monitored for any changes. If any changes to the source branch is detected, it triggers the pipeline. Source stage pulls the latest version of the code from the github branch, zips it and upload it into an S3 bucket. Build stage uses AWS CodeBuild and [Taskcat](https://github.com/aws-quickstart/taskcat) to test the CloudFormation templates. Code Build takes the zip file from the S3 bucket, un-packs it and runs Taskcat to test the CloudFormation templates. If test passes successfully, build job is marked as success. The last stage is Deploy, which invokes lambda function to merge the source branch of github repository into release branch, on successfull build.
-Taskcat reports are uploaded to the artifact S3 bucket.
+The Quick Start sets up a CI/CD environment that includes AWS TaskCat for testing, AWS CodePipeline for continuous integration, and AWS CodeBuild as your build service.
 
-## Pre-requisites
-1. Github repository - Quick Start github repository (or fork repo) which you want to use as a source for the CI/CD pipeline.
-2. Github token - Goto github (https://github.com/settings/tokens) to create an OAuth2 token with following permissions - admin:repo_hook and repo. This is needed to merge branches via Git API.
+TaskCat is a tool that tests AWS CloudFormation templates. It creates stacks in multiple AWS Regions simultaneously and generates a report with a pass/fail grade for each region. You can specify the regions, indicate the number of Availability Zones you want to include in the test, and pass in the AWS CloudFormation parameter values you want to test. You can use this Quick Start to test any AWS CloudFormation templates, including nested templates, from a GitHub repository.
 
-## Steps to deploy
-1. Login to the AWS console and select a region where you want to deploy this Quick Start.
-2. Create parameter in SSM Parameter store - Go to Systems Manager console, select Parameter store from the left navigation and create the following parameter. Currently, CloudFormation doesn't support creating SSM parameter with SecureString Type, therefore this manual step is needed.
- 1. Name: GITHUBTOKEN
- 	Description: Github token used by Lambda function to merge branches via API
- 	Type: SecureString
- 	KMS key source: My current account
- 	KMS Key ID: alias/aws/ssm
- 	Value: <Github-token>
-3. Go to CloudFormation console and launch taskcat-ci-pipeline.template to deploy the CI/CD pipeline. Make sure you are in the same region where you created the parameters in previous step.
+TaskCat is available as an [open-source tool in GitHub](https://github.com/aws-quickstart/taskcat).
+
+![Quick Start architecture for CI/CD Pipeline for AWS CloudFormation templates on AWS](https://d0.awsstatic.com/partner-network/QuickStart/datasheets/cicd-taskcat-pipeline.png)
+
+For architectural details, best practices, step-by-step instructions, and customization options, see the 
+[deployment guide](https://fwd.aws/mnpXR).
+
+To post feedback, submit feature ideas, or report bugs, use the **Issues** section of this GitHub repo.
+If you'd like to submit code for this Quick Start, please review the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/). 
