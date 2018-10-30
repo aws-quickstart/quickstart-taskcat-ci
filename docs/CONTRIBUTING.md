@@ -31,7 +31,7 @@ To contribute, send us a pull request. For small changes, such as fixing a typo 
 Before you send us a pull request, please make sure that:
 
 1. You're working from the latest source on the **master** branch.
-2. You check [existing open](https://github.com/aws-quickstart/quickstart-taskcat-ci/pulls), and [recently closed](https://github.com/aws-quickstart/quickstart-taskcat-ci/pulls?q=is%3Apr+is%3Aclosed), pull requests to be sure that someone else hasn't already addressed the problem.
+2. You check [existing open](https://github.com/aws-quickstart/quickstart-taskcat-ci/pulls) and [recently closed](https://github.com/aws-quickstart/quickstart-taskcat-ci/pulls?q=is%3Apr+is%3Aclosed) pull requests to be sure that someone else hasn't already addressed the problem.
 3. You [create an issue](https://github.com/aws-quickstart/quickstart-taskcat-ci/issues/new) before working on a contribution that will take a significant amount of your time.
 
 For contributions that will take a significant amount of time, [open a new issue](https://github.com/aws-quickstart/quickstart-taskcat-ci/issues/new) to pitch your idea before you get started. Explain the problem and describe the content you want to see added to the documentation. Let us know if you'll write it yourself or if you'd like us to help. We'll discuss your proposal with you and let you know whether we're likely to accept it. We don't want you to spend a lot of time on a contribution that might be outside the scope of the documentation or that's already in the works.
