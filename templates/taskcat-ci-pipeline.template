@@ -2,159 +2,101 @@
   "AWSTemplateFormatVersion" : "2010-09-09",
   "Description" : "Creates Pipeline and required resources for TaskCat CI. License: Apache 2.0 (Please do not remove)(qs-1ops82lkf)",
   "Resources" : {
-    "CopyLambdasStack": {
-      "Type": "AWS::CloudFormation::Stack",
+    "CopyLambdasStack" : {
+      "Type" : "AWS::CloudFormation::Stack",
       "Properties" : {
-        "TemplateURL": {
-                    "Fn::Sub": "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/copy-lambdas.template"
+        "TemplateURL" : {
+          "Fn::Sub" : "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/copy-lambdas.template"
         },
-        "Parameters": {
-          "BucketName": {
-            "Ref": "ArtifactBucket"
+        "Parameters" : {
+          "BucketName" : {
+            "Ref" : "ArtifactBucket"
           },
-          "QSS3BucketName": {
-            "Ref": "QSS3BucketName"
+          "QSS3BucketName" : {
+            "Ref" : "QSS3BucketName"
           },
-          "QSS3KeyPrefix": {
-            "Ref": "QSS3KeyPrefix"
+          "QSS3KeyPrefix" : {
+            "Ref" : "QSS3KeyPrefix"
           }
         }
       }
     },
-    "GitMergeLambda": {
-            "Type": "AWS::Lambda::Function",
-            "DependsOn": [
-              "GitMergeRole",
-              "CopyLambdasStack"
-            ],
-            "Properties": {
-                "Code": {
-                    "S3Bucket": {
-                        "Fn::GetAtt": [
-                            "CopyLambdasStack",
-                            "Outputs.LambdaZipsBucket"
-                        ]
-                    },
-                    "S3Key": {
-                        "Fn::Sub": "${QSS3KeyPrefix}functions/package/git_merge.zip"
-                    }
-                },
-                "Description": "Merge github branches",
-                "FunctionName": "Git_Merge",
-                "Handler": {
-                    "Fn::Join": [
-                        ".",
-                        [
-                            "git_merge",
-                            "lambda_handler"
-                        ]
-                    ]
-                },
-                "Role": {
-                    "Fn::GetAtt": [
-                        "GitMergeRole",
-                        "Arn"
-                    ]
-                },
-                "Runtime": "python3.6",
-                "Timeout": "30"
-            }
+    "GitMergeLambda" : {
+      "Type" : "AWS::Lambda::Function",
+      "DependsOn" : [ "GitMergeRole", "CopyLambdasStack" ],
+      "Properties" : {
+        "Code" : {
+          "S3Bucket" : {
+            "Fn::GetAtt" : [ "CopyLambdasStack", "Outputs.LambdaZipsBucket" ]
+          },
+          "S3Key" : {
+            "Fn::Sub" : "${QSS3KeyPrefix}functions/package/git_merge.zip"
+          }
         },
-      "GitMergeRole": {
-            "Type": "AWS::IAM::Role",
-            "Properties": {
-                "AssumeRolePolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Principal": {
-                                "Service": "lambda.amazonaws.com"
-                            },
-                            "Action": "sts:AssumeRole"
-                        }
-                    ]
-                },
-                "Path": "/",
-                "Policies": [
-                    {
-                        "PolicyName": "GitMergeRolePolicy",
-                        "PolicyDocument": {
-                            "Version": "2012-10-17",
-                            "Statement": [
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "logs:CreateLogGroup",
-                                        "logs:CreateLogStream",
-                                        "logs:PutLogEvents"
-                                    ],
-                                    "Resource": [
-                                        {
-                                            "Fn::Join": [
-                                                "",
-                                                [
-                                                    "arn:aws:logs:",
-                                                    {
-                                                        "Ref": "AWS::Region"
-                                                    },
-                                                    ":",
-                                                    {
-                                                        "Ref": "AWS::AccountId"
-                                                    },
-                                                    ":log-group:/aws/lambda/*"
-                                                ]
-                                            ]
-                                        }
-                                    ]
-                                },
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "codepipeline:GetPipeline",
-                                        "codepipeline:GetPipelineExecution",
-                                        "codepipeline:GetPipelineState",
-                                        "codepipeline:ListPipelines",
-                                        "codepipeline:ListPipelineExecutions"
-                                    ],
-                                    "Resource": [
-                                        {
-                                            "Fn::Sub": "arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:*"
-                                        }
-                                    ]
-                                },
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "codepipeline:GetJobDetails",
-                                        "codepipeline:PutJobSuccessResult",
-                                        "codepipeline:PutJobFailureResult"
-                                    ],
-                                    "Resource": "*"
-                                },
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "s3:GetObject"
-                                    ],
-                                    "Resource": "*"
-                                },
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "ssm:Describe*",
-						                "ssm:Get*",
-						                "ssm:List*"
-                                    ],
-                                    "Resource": "*"
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
+        "Description" : "Merge github branches",
+        "FunctionName" : "Git_Merge",
+        "Handler" : {
+          "Fn::Join" : [ ".", [ "git_merge", "lambda_handler" ] ]
         },
-        "CodePipeline" : {
+        "Role" : {
+          "Fn::GetAtt" : [ "GitMergeRole", "Arn" ]
+        },
+        "Runtime" : "python3.6",
+        "Timeout" : "30"
+      }
+    },
+    "GitMergeRole" : {
+      "Type" : "AWS::IAM::Role",
+      "Properties" : {
+        "AssumeRolePolicyDocument" : {
+          "Version" : "2012-10-17",
+          "Statement" : [ {
+            "Effect" : "Allow",
+            "Principal" : {
+              "Service" : "lambda.amazonaws.com"
+            },
+            "Action" : "sts:AssumeRole"
+          } ]
+        },
+        "Path" : "/",
+        "Policies" : [ {
+          "PolicyName" : "GitMergeRolePolicy",
+          "PolicyDocument" : {
+            "Version" : "2012-10-17",
+            "Statement" : [ {
+              "Effect" : "Allow",
+              "Action" : [ "logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents" ],
+              "Resource" : [ {
+                "Fn::Join" : [ "", [ "arn:aws:logs:", {
+                  "Ref" : "AWS::Region"
+                }, ":", {
+                  "Ref" : "AWS::AccountId"
+                }, ":log-group:/aws/lambda/*" ] ]
+              } ]
+            }, {
+              "Effect" : "Allow",
+              "Action" : [ "codepipeline:GetPipeline", "codepipeline:GetPipelineExecution", "codepipeline:GetPipelineState", "codepipeline:ListPipelines", "codepipeline:ListPipelineExecutions" ],
+              "Resource" : [ {
+                "Fn::Sub" : "arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:*"
+              } ]
+            }, {
+              "Effect" : "Allow",
+              "Action" : [ "codepipeline:GetJobDetails", "codepipeline:PutJobSuccessResult", "codepipeline:PutJobFailureResult" ],
+              "Resource" : "*"
+            }, {
+              "Effect" : "Allow",
+              "Action" : [ "s3:GetObject" ],
+              "Resource" : "*"
+            }, {
+              "Effect" : "Allow",
+              "Action" : [ "ssm:Describe*", "ssm:Get*", "ssm:List*" ],
+              "Resource" : "*"
+            } ]
+          }
+        } ]
+      }
+    },
+    "CodePipeline" : {
       "Type" : "AWS::CodePipeline::Pipeline",
       "Properties" : {
         "ArtifactStore" : {
@@ -217,30 +159,27 @@
             },
             "RunOrder" : 2
           } ]
-        },
-      	{
-                        "Name": "Deploy",
-                        "Actions": [
-                            {
-                                "Name": "Git-merge",
-                                "ActionTypeId": {
-                                    "Category": "Invoke",
-                                    "Owner": "AWS",
-                                    "Version": "1",
-                                    "Provider": "Lambda"
-                                },
-                                "Configuration": {
-                                    "FunctionName": {
-                                        "Ref": "GitMergeLambda"
-                                    },
-                                    "UserParameters": {
-                                        "Fn::Sub": "{ \"owner\": \"${GitHubUser}\", \"repo\": \"${GitHubRepoName}\", \"baseBranch\": \"${ReleaseBranch}\", \"headBranch\": \"${SourceRepoBranch}\" }"
-                                    }
-                                },
-                                "RunOrder": 3
-                            }
-                        ]
-                    } ]
+        }, {
+          "Name" : "Deploy",
+          "Actions" : [ {
+            "Name" : "Git-merge",
+            "ActionTypeId" : {
+              "Category" : "Invoke",
+              "Owner" : "AWS",
+              "Version" : "1",
+              "Provider" : "Lambda"
+            },
+            "Configuration" : {
+              "FunctionName" : {
+                "Ref" : "GitMergeLambda"
+              },
+              "UserParameters" : {
+                "Fn::Sub" : "{ \"owner\": \"${GitHubUser}\", \"repo\": \"${GitHubRepoName}\", \"baseBranch\": \"${ReleaseBranch}\", \"headBranch\": \"${SourceRepoBranch}\" }"
+              }
+            },
+            "RunOrder" : 3
+          } ]
+        } ]
       }
     },
     "CodeBuild" : {
@@ -307,16 +246,12 @@
           } ]
         },
         "Path" : "/",
-        "ManagedPolicyArns" : [
-          "arn:aws:iam::aws:policy/AdministratorAccess"
-        ]
+        "ManagedPolicyArns" : [ "arn:aws:iam::aws:policy/AdministratorAccess" ]
       }
     },
     "CodePipelineServiceRole" : {
       "Type" : "AWS::IAM::Role",
-      "DependsOn" : [
-        "ArtifactBucket"
-      ],
+      "DependsOn" : [ "ArtifactBucket" ],
       "Properties" : {
         "AssumeRolePolicyDocument" : {
           "Version" : "2012-10-17",
@@ -353,13 +288,7 @@
               "Resource" : "*",
               "Effect" : "Allow"
             }, {
-              "Action" : [ "lambda:GetPolicy", "lambda:ListEventSourceMappings", "lambda:ListFunctions",
-                "lambda:InvokeFunction",
-                "lambda:GetEventSourceMapping",
-                "lambda:GetFunction",
-                "lambda:ListAliases","lambda:GetAlias","lambda:ListTags","lambda:ListVersionsByFunction",
-                "lambda:GetAccountSettings",
-                "lambda:GetFunctionConfiguration" ],
+              "Action" : [ "lambda:GetPolicy", "lambda:ListEventSourceMappings", "lambda:ListFunctions", "lambda:InvokeFunction", "lambda:GetEventSourceMapping", "lambda:GetFunction", "lambda:ListAliases", "lambda:GetAlias", "lambda:ListTags", "lambda:ListVersionsByFunction", "lambda:GetAccountSettings", "lambda:GetFunctionConfiguration" ],
               "Resource" : "*",
               "Effect" : "Allow"
             } ]
@@ -381,7 +310,7 @@
       "Description" : "Enter the branch name to be monitored",
       "Type" : "String"
     },
-    "ReleaseBranch": {
+    "ReleaseBranch" : {
       "Description" : "Enter the release branch name. On successfull build, above branch will be merged into this branch.",
       "Type" : "String"
     },
@@ -391,18 +320,18 @@
       "NoEcho" : "true"
     },
     "QSS3BucketName" : {
-      "AllowedPattern": "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
-        "ConstraintDescription": "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
-        "Default": "aws-quickstart",
-        "Description": "S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
-        "Type": "String"
+      "AllowedPattern" : "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
+      "ConstraintDescription" : "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
+      "Default" : "aws-quickstart",
+      "Description" : "S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
+      "Type" : "String"
     },
     "QSS3KeyPrefix" : {
-      "AllowedPattern": "^[0-9a-zA-Z-/]*$",
-        "ConstraintDescription": "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-        "Default": "quickstart-taskcat-ci/",
-        "Description": "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-        "Type": "String"
+      "AllowedPattern" : "^[0-9a-zA-Z-/]*$",
+      "ConstraintDescription" : "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
+      "Default" : "quickstart-taskcat-ci/",
+      "Description" : "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
+      "Type" : "String"
     }
   },
   "Metadata" : {
@@ -411,17 +340,13 @@
         "Label" : {
           "default" : "GitHub Configuration"
         },
-        "Parameters" : [ "GitHubUser", "GitHubRepoName", "SourceRepoBranch", "ReleaseBranch","GitHubOAuthToken" ]
-      },
-      {
-        "Label": {
-            "default": "AWS Quick Start Configuration"
+        "Parameters" : [ "GitHubUser", "GitHubRepoName", "SourceRepoBranch", "ReleaseBranch", "GitHubOAuthToken" ]
+      }, {
+        "Label" : {
+          "default" : "AWS Quick Start Configuration"
         },
-        "Parameters": [
-            "QSS3BucketName",
-            "QSS3KeyPrefix"
-        ]
-    } ],
+        "Parameters" : [ "QSS3BucketName", "QSS3KeyPrefix" ]
+      } ],
       "ParameterLabels" : {
         "GitHubUser" : {
           "default" : "Repository owner"
@@ -438,11 +363,11 @@
         "GitHubOAuthToken" : {
           "default" : "OAuth2 token"
         },
-        "QSS3BucketName": {
-            "default": "Quick Start S3 Bucket Name"
+        "QSS3BucketName" : {
+          "default" : "Quick Start S3 Bucket Name"
         },
-        "QSS3KeyPrefix": {
-            "default": "Quick Start S3 Key Prefix"
+        "QSS3KeyPrefix" : {
+          "default" : "Quick Start S3 Key Prefix"
         }
       }
     }
