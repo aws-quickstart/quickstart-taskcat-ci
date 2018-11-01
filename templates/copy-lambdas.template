@@ -38,7 +38,7 @@
                     "Ref": "LambdaZipsBucket"
                 },
                 "Objects": [
-                    "functions/package/git_merge.zip"
+                    "functions/package/lambda.zip"
                 ],
                 "SourceBucket": {
                     "Ref": "QSS3BucketName"
