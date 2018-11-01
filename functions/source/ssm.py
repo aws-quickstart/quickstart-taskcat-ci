@@ -30,7 +30,7 @@ def lambda_handler(event, context):
         context: The context passed by Lambda
         
     """
-    logger.debug("EVENT: " + str(event))
+    logger.debug("EVENT: %s", str(event))
     
     # If it's a DELETE event
     if event['RequestType'] == 'Delete':
@@ -100,7 +100,7 @@ def send_cfnresponse(event, context, response_status, data):
     response_body['Data'] = data
 
     json_response = json.dumps(response_body)
-    logger.debug("Response body:\n" + json_response)
+    logger.debug("Response body:\n%s", json_response)
 
     headers = {
         'content-type': '',
@@ -109,6 +109,6 @@ def send_cfnresponse(event, context, response_status, data):
 
     try:
         response = requests.put(response_url, data=json_response, headers=headers)
-        logger.info("Status code: " + response.reason)
+        logger.info("Status code: %s", response.reason)
     except Exception as e:
-        logger.error("send(..) failed executing requests.put(..): " + str(e))
+        logger.error("send(..) failed executing requests.put(..): %s", str(e))
