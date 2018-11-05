@@ -16,7 +16,7 @@ merge_endpoint = 'https://api.github.com/repos/{owner}/{repo}/merges'
 # setup client
 region = os.environ['AWS_REGION']
 ssm = boto3.client('ssm', region_name=region)
-code_pipeline = boto3.client('codepipeline')
+code_pipeline = boto3.client('codepipeline', region_name=region)
 
 def put_job_success(job, message):
     """Notify CodePipeline of a successful job
