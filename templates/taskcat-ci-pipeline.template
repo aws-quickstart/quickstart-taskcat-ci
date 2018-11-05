@@ -21,16 +21,36 @@
         }
       }
     },
+    "SSMStack" : {
+      "Type" : "AWS::CloudFormation::Stack",
+      "DependsOn" : [ "CopyLambdasStack" ],
+      "Properties" : {
+        "TemplateURL" : {
+          "Fn::Sub" : "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/ssm.template"
+        },
+        "Parameters" : {
+          "GithubToken" : {
+            "Ref" : "GitHubOAuthToken"
+          },
+          "LambdaZipsBucket" : {
+            "Fn::GetAtt" : [ "CopyLambdasStack", "Outputs.LambdaZipsBucket" ]
+          },
+          "QSS3KeyPrefix" : {
+            "Ref" : "QSS3KeyPrefix"
+          }
+        }
+      }
+    },
     "GitMergeLambda" : {
       "Type" : "AWS::Lambda::Function",
-      "DependsOn" : [ "GitMergeRole", "CopyLambdasStack" ],
+      "DependsOn" : [ "GitMergeRole", "CopyLambdasStack", "SSMStack" ],
       "Properties" : {
         "Code" : {
           "S3Bucket" : {
             "Fn::GetAtt" : [ "CopyLambdasStack", "Outputs.LambdaZipsBucket" ]
           },
           "S3Key" : {
-            "Fn::Sub" : "${QSS3KeyPrefix}functions/package/git_merge.zip"
+            "Fn::Sub" : "${QSS3KeyPrefix}functions/package/lambda.zip"
           }
         },
         "Description" : "Merge github branches",
@@ -91,6 +111,12 @@
               "Effect" : "Allow",
               "Action" : [ "ssm:Describe*", "ssm:Get*", "ssm:List*" ],
               "Resource" : "*"
+            }, {
+              "Effect" : "Allow",
+              "Action" : [ "kms:Decrypt" ],
+              "Resource" : {
+               		"Fn::GetAtt" : [ "SSMStack", "Outputs.KMSKeyArn" ] 
+              }
             } ]
           }
         } ]

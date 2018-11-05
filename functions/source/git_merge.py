@@ -4,6 +4,7 @@ import json
 import logging
 import requests
 import boto3
+import os
 
 # set logging
 logger = logging.getLogger()
@@ -13,8 +14,9 @@ logger.setLevel(logging.DEBUG)
 merge_endpoint = 'https://api.github.com/repos/{owner}/{repo}/merges'
 
 # setup client
-ssm = boto3.client('ssm', region_name='us-east-1')
-code_pipeline = boto3.client('codepipeline')
+region = os.environ['AWS_REGION']
+ssm = boto3.client('ssm', region_name=region)
+code_pipeline = boto3.client('codepipeline', region_name=region)
 
 def put_job_success(job, message):
     """Notify CodePipeline of a successful job
