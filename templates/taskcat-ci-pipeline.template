@@ -137,9 +137,23 @@
         }
       }
     },
-    "CodePipelineStack" : {
+    "IAMRoleStack" : {
       "Type" : "AWS::CloudFormation::Stack",
       "DependsOn" : [ "ArtifactBucket" ],
+      "Properties" : {
+        "TemplateURL" : {
+          "Fn::Sub" : "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/iam-roles.template"
+        },
+        "Parameters" : {
+          "ArtifactBucket" : {
+            "Ref" : "ArtifactBucket"
+          }
+        }
+      }
+    },
+    "CodePipelineStack" : {
+      "Type" : "AWS::CloudFormation::Stack",
+      "DependsOn" : [ "ArtifactBucket", "IAMRoleStack" ],
       "Properties" : {
         "TemplateURL" : {
           "Fn::Sub" : "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/pipeline.template"
@@ -165,6 +179,12 @@
           },
           "GitMergeLambda" : {
             "Ref" : "GitMergeLambda"
+          },
+          "CodePipelineRoleArn" : {
+            "Fn::GetAtt" : [ "IAMRoleStack", "Outputs.CodePipelineRoleArn" ]
+          },
+          "CodeBuildRoleArn" : {
+            "Fn::GetAtt" : [ "IAMRoleStack", "Outputs.CodeBuildRoleArn" ]
           }
         }
       }
