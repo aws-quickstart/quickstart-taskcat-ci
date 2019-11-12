@@ -27,3 +27,8 @@ tests:
       - us-east-2
       - us-west-1
       - us-west-2
+  # code-commit-pipeline-test:
+  #   parameter_input: input-params-codecommit.json
+  #   template_file: taskcat-ci-pipeline.yaml.template
+  #   regions:
+  #     - us-west-2
