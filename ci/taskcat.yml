@@ -19,16 +19,16 @@ global:
   reporting: true
  
 tests:
-  # quickstart-taskcat-ci-test1:
-  #   parameter_input: input-params1.json
-  #   template_file: taskcat-ci-pipeline.template
-  #   regions:
-  #     - us-east-1
-  #     - us-east-2
-  #     - us-west-1
-  #     - us-west-2
-  code-commit-pipeline-test:
-    parameter_input: input-params-codecommit.json
-    template_file: taskcat-ci-pipeline.yaml.template
+  quickstart-taskcat-ci-test1:
+    parameter_input: input-params1.json
+    template_file: taskcat-ci-pipeline.template
     regions:
+      - us-east-1
+      - us-east-2
+      - us-west-1
       - us-west-2
+  # code-commit-pipeline-test:
+  #   parameter_input: input-params-codecommit.json
+  #   template_file: taskcat-ci-pipeline.yaml.template
+  #   regions:
+  #     - us-west-2
