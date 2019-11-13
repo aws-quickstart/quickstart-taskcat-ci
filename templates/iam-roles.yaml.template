@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates IAM roles for TaskCat CI.
+Resources:
+  CodeBuildServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+  CodePipelineServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub 'TaskCat-CICD-CodePipelineService-${AWS::Region}'
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:GetBucketVersioning'
+                  - 's3:PutObject'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ArtifactBucket}'
+                  - !Sub 'arn:aws:s3:::${ArtifactBucket}/*'
+                Effect: Allow
+              - Action:
+                  - 'cloudformation:CreateStack'
+                  - 'cloudformation:DeleteStack'
+                  - 'cloudformation:DescribeStacks'
+                  - 'cloudformation:UpdateStack'
+                  - 'cloudformation:CreateChangeSet'
+                  - 'cloudformation:DeleteChangeSet'
+                  - 'cloudformation:DescribeChangeSet'
+                  - 'cloudformation:ExecuteChangeSet'
+                  - 'cloudformation:SetStackPolicy'
+                  - 'cloudformation:ValidateTemplate'
+                  - 'iam:PassRole'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'codebuild:BatchGetBuilds'
+                  - 'codebuild:StartBuild'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'lambda:GetPolicy'
+                  - 'lambda:ListEventSourceMappings'
+                  - 'lambda:ListFunctions'
+                  - 'lambda:InvokeFunction'
+                  - 'lambda:GetEventSourceMapping'
+                  - 'lambda:GetFunction'
+                  - 'lambda:ListAliases'
+                  - 'lambda:GetAlias'
+                  - 'lambda:ListTags'
+                  - 'lambda:ListVersionsByFunction'
+                  - 'lambda:GetAccountSettings'
+                  - 'lambda:GetFunctionConfiguration'
+                Resource: '*'
+                Effect: Allow
+              - Action:
+                  - 'codecommit:*'
+                Resource: '*'
+                Effect: Allow
+Parameters:
+  ArtifactBucket:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Description: S3 bucket name used to store build artifacts.
+    Type: String
+Outputs:
+  CodePipelineRoleArn:
+    Description: Code Pipeline service role arn
+    Value: !GetAtt 
+      - CodePipelineServiceRole
+      - Arn
+  CodeBuildRoleArn:
+    Description: Code Build service role arn
+    Value: !GetAtt 
+      - CodeBuildServiceRole
+      - Arn

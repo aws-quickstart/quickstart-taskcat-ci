@@ -1,0 +1,26 @@
+[
+  {
+    "ParameterKey": "CodeCommitRepoName",
+    "ParameterValue": "quickstart-ci-repo"
+  },
+  {
+    "ParameterKey": "CodeCommitRepoUrl",
+    "ParameterValue": "https://git-codecommit.us-west-2.amazonaws.com/v1/repos/quickstart-ci-repo"
+  },
+  {
+    "ParameterKey": "SourceBranch",
+    "ParameterValue": "develop"
+  },
+  {
+    "ParameterKey": "ReleaseBranch",
+    "ParameterValue": "master"
+  },
+  {
+    "ParameterKey": "QSS3BucketName",
+    "ParameterValue": "$[taskcat_autobucket]"
+  },
+  {
+    "ParameterKey": "QSS3KeyPrefix",
+    "ParameterValue": "quickstart-taskcat-ci/"
+  }
+]

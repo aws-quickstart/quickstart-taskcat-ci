@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Creates Pipeline and required resources for TaskCat CI. License: Apache 2.0
+  (Please do not remove)(qs-1ops82lkf)
+
+Resources:
+  ArtifactBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: Private
+      LifecycleConfiguration:
+        Rules:
+          - NoncurrentVersionExpirationInDays: 30
+            Status: Enabled
+      VersioningConfiguration:
+        Status: Enabled
+  EmptyBucketLambdaStack:
+    Type: 'AWS::CloudFormation::Stack'
+    DependsOn:
+      - ArtifactBucket
+    Properties:
+      TemplateURL: !Sub >-
+        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/empty-bucket.yaml.template
+      Parameters:
+        BucketName: !Ref ArtifactBucket
+  IAMRoleStack:
+    Type: 'AWS::CloudFormation::Stack'
+    DependsOn:
+      - ArtifactBucket
+    Properties:
+      TemplateURL: !Sub >-
+        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/iam-roles.yaml.template
+      Parameters:
+        ArtifactBucket: !Ref ArtifactBucket
+  CodePipelineStack:
+    Type: 'AWS::CloudFormation::Stack'
+    DependsOn:
+      - ArtifactBucket
+      - IAMRoleStack
+    Properties:
+      TemplateURL: !Sub >-
+        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/pipeline.yaml.template
+      Parameters:
+        CodeCommitRepoName: !Ref CodeCommitRepoName
+        CodeCommitRepoUrl: !Ref CodeCommitRepoUrl
+        SourceBranch: !Ref SourceBranch
+        ReleaseBranch: !Ref ReleaseBranch
+        ArtifactBucket: !Ref ArtifactBucket
+        CodePipelineRoleArn: !GetAtt 
+          - IAMRoleStack
+          - Outputs.CodePipelineRoleArn
+        CodeBuildRoleArn: !GetAtt 
+          - IAMRoleStack
+          - Outputs.CodeBuildRoleArn
+
+Parameters:
+  CodeCommitRepoName:
+    Description: Enter the repository name that should be monitored for changes
+    Type: String
+  CodeCommitRepoUrl:
+    Description: >-
+      AWS Code commit repository URL which will be monitored for CI/CD. Provide
+      https:// endpoint of the repo.
+    Type: String
+  SourceBranch:
+    Description: Enter the branch name to be monitored
+    Type: String
+    Default: develop
+  ReleaseBranch:
+    Description: >-
+      Enter the release branch name. On successfull build, above branch will be
+      merged into this branch.
+    Type: String
+    Default: master
+  QSS3BucketName:
+    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
+    ConstraintDescription: >-
+      Quick Start bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
+    Description: >-
+      S3 bucket name for the Quick Start assets. Quick Start bucket name can
+      include numbers, lowercase letters, uppercase letters, and hyphens (-). It
+      cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/).
+    Default: quickstart-taskcat-ci/
+    Description: >-
+      S3 key prefix for the Quick Start assets. Quick Start key prefix can
+      include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+    Type: String
+
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: AWS Code Commit Configuration
+        Parameters:
+          - CodeCommitRepoName
+          - CodeCommitRepoUrl
+          - SourceBranch
+          - ReleaseBranch
+      - Label:
+          default: AWS Quick Start Configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      CodeCommitRepoUrl:
+        default: Repository URL
+      CodeCommitRepoName:
+        default: Repository name
+      SourceBranch:
+        default: Source branch
+      ReleaseBranch:
+        default: Release branch
+      QSS3BucketName:
+        default: Quick Start S3 Bucket Name
+      QSS3KeyPrefix:
+        default: Quick Start S3 Key Prefix
+
+Outputs:
+  CodePipelineURL:
+    Description: The URL of the created Pipeline
+    Value: !Sub 
+      - >-
+        https://${AWS::Region}.console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${CodePipelineName}
+      - CodePipelineName: !GetAtt 
+          - CodePipelineStack
+          - Outputs.CodePipelineName
+  TaskCatReports:
+    Description: Path to the TaskCat report. Each report is named as CODEBUILD_BUILD_ID.zip
+    Value: !Sub 's3://${ArtifactBucket}/taskcat_reports/'
