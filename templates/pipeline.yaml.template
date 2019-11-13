@@ -145,7 +145,7 @@ Resources:
                     - ls -R
                     - cd ..
                     - echo Installing Taskcat using pip3...
-                    - pip install taskcat==0.8.49
+                    - pip install taskcat==0.9.1
                     - echo Verifying Taskcat installation...
                     - taskcat
                     - echo Configuring aws cli...
@@ -153,7 +153,8 @@ Resources:
             build:
                 commands:
                     - echo Entered the build phase...
-                    - taskcat -c $PROJECTNAME/ci/taskcat.yml
+                    - cd $PROJECTNAME
+                    - taskcat test run -l
                     - ls -1 taskcat_outputs
                     - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/$LOG; done
                     - |
