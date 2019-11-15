@@ -154,7 +154,7 @@ Resources:
                 commands:
                     - echo Entered the build phase...
                     - cd $PROJECTNAME
-                    - taskcat test run -l
+                    - taskcat test run -l -n
                     - ls -1 taskcat_outputs
                     - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/$LOG; done
                     - |
