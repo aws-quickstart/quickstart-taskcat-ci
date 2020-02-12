@@ -115,7 +115,7 @@
               "Effect" : "Allow",
               "Action" : [ "kms:Decrypt" ],
               "Resource" : {
-               		"Fn::GetAtt" : [ "SSMStack", "Outputs.KMSKeyArn" ] 
+                "Fn::GetAtt" : [ "SSMStack", "Outputs.KMSKeyArn" ]
               }
             } ]
           }
