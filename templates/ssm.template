@@ -1,249 +1,157 @@
-{
-    "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "This template creates KMS Key and use that key to create Secure string parameter in AWS Systems Manager.",
-    "Parameters": {
-      	"GithubToken": {
-         "Description" : "GitHub OAuth Token",
-         "Type" : "String",
-         "NoEcho" : "true"
-       },
-       "LambdaZipsBucket": {
-         "Description" : "Bucket name containing lambda zip files",
-         "Type" : "String"
-       },
-        "QSS3KeyPrefix": {
-            "AllowedPattern": "^[0-9a-zA-Z-/]*$",
-            "ConstraintDescription": "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-            "Default": "quickstart-taskcat-ci/",
-            "Description": "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-            "Type": "String"
-        }
-    },
-    "Resources": {
-        "KMSKey": {
-            "Type": "AWS::KMS::Key",
-            "Properties": {
-                "Description": "Used to encrypt/decrypt secure string parameters in AWS Systems manager parameter store",
-                "KeyPolicy": {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Sid": "Allow access for Key Administrators",
-                            "Effect": "Allow",
-                            "Principal": {
-                                "AWS": [
-                                    {
-                                        "Fn::Join": [
-                                            "",
-                                            [
-                                                "arn:aws:iam::",
-                                                {
-                                                    "Ref": "AWS::AccountId"
-                                                },
-                                                ":root"
-                                            ]
-                                        ]
-                                    }
-                                ]
-                            },
-                            "Action": [
-                                "kms:Create*",
-                                "kms:Describe*",
-                                "kms:Enable*",
-                                "kms:List*",
-                                "kms:Put*",
-                                "kms:Update*",
-                                "kms:Revoke*",
-                                "kms:Disable*",
-                                "kms:Get*",
-                                "kms:Delete*",
-                                "kms:ScheduleKeyDeletion",
-                                "kms:CancelKeyDeletion"
-                            ],
-                            "Resource": "*"
-                        },
-                        {
-                            "Sid": "Allow use of the key",
-                            "Effect": "Allow",
-                            "Principal": {
-                                "AWS": [
-                                    {
-                                        "Fn::Join": [
-                                            "",
-                                            [
-                                                "arn:aws:iam::",
-                                                {
-                                                    "Ref": "AWS::AccountId"
-                                                },
-                                                ":root"
-                                            ]
-                                        ]
-                                    }
-                                ]
-                            },
-                            "Action": [
-                                "kms:Encrypt",
-                                "kms:Decrypt",
-                                "kms:ReEncrypt*",
-                                "kms:GenerateDataKey*",
-                                "kms:DescribeKey"
-                            ],
-                            "Resource": "*"
-                        },
-                        {
-                            "Sid": "Allow attachment of persistent resources",
-                            "Effect": "Allow",
-                            "Principal": {
-                                "AWS": [
-                                    {
-                                        "Fn::Join": [
-                                            "",
-                                            [
-                                                "arn:aws:iam::",
-                                                {
-                                                    "Ref": "AWS::AccountId"
-                                                },
-                                                ":root"
-                                            ]
-                                        ]
-                                    }
-                                ]
-                            },
-                            "Action": [
-                                "kms:CreateGrant",
-                                "kms:ListGrants",
-                                "kms:RevokeGrant"
-                            ],
-                            "Resource": "*",
-                            "Condition": {
-                                "Bool": {
-                                    "kms:GrantIsForAWSResource": true
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        },
-        "CreateSecureStringParameterKeyRole": {
-            "Type": "AWS::IAM::Role",
-            "Properties": {
-                "AssumeRolePolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Principal": {
-                                "Service": "lambda.amazonaws.com"
-                            },
-                            "Action": "sts:AssumeRole"
-                        }
-                    ]
-                },
-                "ManagedPolicyArns": [
-                    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-                ],
-                "Path": "/",
-                "Policies": [
-                    {
-                        "PolicyName": "ssm-createParam",
-                        "PolicyDocument": {
-                            "Version": "2012-10-17",
-                            "Statement": [
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "kms:Encrypt",
-                                        "kms:Decrypt"
-                                    ],
-                                    "Resource": [
-                                        {
-                                            "Fn::GetAtt": [
-                                                "KMSKey",
-                                                "Arn"
-                                            ]
-                                        }
-                                    ]
-                                },
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "ssm:PutParameter",
-                                        "ssm:DeleteParameter",
-                                        "ssm:DeleteParameters"
-                                    ],
-                                    "Resource": [
-                                        "*"
-                                    ]
-                                },
-                                {
-                                    "Effect": "Allow",
-                                    "Action": [
-                                        "logs:CreateLogGroup",
-                                        "logs:CreateLogStream",
-                                        "logs:PutLogEvents"
-                                    ],
-                                    "Resource": [
-                                        "arn:aws:logs:*:*:*"
-                                    ]
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
-        },
-        "CreateSSMParamLambda": {
-            "Type": "AWS::Lambda::Function",
-            "Properties": {
-                "Handler": "ssm.lambda_handler",
-                "MemorySize": "128",
-                "Role": {
-                    "Fn::GetAtt": [
-                        "CreateSecureStringParameterKeyRole",
-                        "Arn"
-                    ]
-                },
-                "Runtime": "python3.6",
-                "Timeout": "300",
-                "Code": {
-                    "S3Bucket" : {
-			            "Ref" : "LambdaZipsBucket"
-			          },
-			          "S3Key" : {
-			            "Fn::Sub" : "${QSS3KeyPrefix}functions/package/lambda.zip"
-			          }
-                }
-            }
-        },
-        "CreateSSMParam": {
-            "Type": "AWS::CloudFormation::CustomResource",
-            "Version": "1.0",
-            "Properties": {
-                "ServiceToken": {
-                    "Fn::GetAtt": [
-                        "CreateSSMParamLambda",
-                        "Arn"
-                    ]
-                },
-                "GITHUBTOKEN": {
-                    "Ref": "GithubToken"
-                },
-                "KMS_KEY_ID": {
-                    "Ref": "KMSKey"
-                }
-            }
-        }
-    },
-    "Outputs": {
-      	"KMSKeyArn": {
-         	"Description" : "KMS Key ARN",
-          	"Value" : {
-             	"Fn::GetAtt": [
-                        "KMSKey",
-                        "Arn"
-                    ]
-           }
-       }
-    }
-}
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  This template creates KMS Key and use that key to create Secure string
+  parameter in AWS Systems Manager.
+Parameters:
+  GithubToken:
+    Description: GitHub OAuth Token
+    Type: String
+    NoEcho: 'true'
+  LambdaZipsBucket:
+    Description: Bucket name containing lambda zip files
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: '^[0-9a-zA-Z-/]*$'
+    ConstraintDescription: >-
+      Quick Start key prefix can include numbers, lowercase letters, uppercase
+      letters, hyphens (-), and forward slash (/).
+    Default: quickstart-taskcat-ci/
+    Description: >-
+      S3 key prefix for the Quick Start assets. Quick Start key prefix can
+      include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+    Type: String
+Resources:
+  KMSKey:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: >-
+        Used to encrypt/decrypt secure string parameters in AWS Systems manager
+        parameter store
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Allow access for Key Administrators
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Join 
+                  - ''
+                  - - 'arn:aws:iam::'
+                    - !Ref 'AWS::AccountId'
+                    - ':root'
+            Action:
+              - 'kms:Create*'
+              - 'kms:Describe*'
+              - 'kms:Enable*'
+              - 'kms:List*'
+              - 'kms:Put*'
+              - 'kms:Update*'
+              - 'kms:Revoke*'
+              - 'kms:Disable*'
+              - 'kms:Get*'
+              - 'kms:Delete*'
+              - 'kms:ScheduleKeyDeletion'
+              - 'kms:CancelKeyDeletion'
+            Resource: '*'
+          - Sid: Allow use of the key
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Join 
+                  - ''
+                  - - 'arn:aws:iam::'
+                    - !Ref 'AWS::AccountId'
+                    - ':root'
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey*'
+              - 'kms:DescribeKey'
+            Resource: '*'
+          - Sid: Allow attachment of persistent resources
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Join 
+                  - ''
+                  - - 'arn:aws:iam::'
+                    - !Ref 'AWS::AccountId'
+                    - ':root'
+            Action:
+              - 'kms:CreateGrant'
+              - 'kms:ListGrants'
+              - 'kms:RevokeGrant'
+            Resource: '*'
+            Condition:
+              Bool:
+                'kms:GrantIsForAWSResource': true
+  CreateSecureStringParameterKeyRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Path: /
+      Policies:
+        - PolicyName: ssm-createParam
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'kms:Encrypt'
+                  - 'kms:Decrypt'
+                Resource:
+                  - !GetAtt 
+                    - KMSKey
+                    - Arn
+              - Effect: Allow
+                Action:
+                  - 'ssm:PutParameter'
+                  - 'ssm:DeleteParameter'
+                  - 'ssm:DeleteParameters'
+                Resource:
+                  - '*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - 'arn:aws:logs:*:*:*'
+  CreateSSMParamLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: ssm.lambda_handler
+      MemorySize: 128
+      Role: !GetAtt 
+        - CreateSecureStringParameterKeyRole
+        - Arn
+      Runtime: python3.6
+      Timeout: 300
+      Code:
+        S3Bucket: !Ref LambdaZipsBucket
+        S3Key: !Sub '${QSS3KeyPrefix}functions/package/lambda.zip'
+  CreateSSMParam:
+    Type: 'AWS::CloudFormation::CustomResource'
+    Version: '1.0'
+    Properties:
+      ServiceToken: !GetAtt 
+        - CreateSSMParamLambda
+        - Arn
+      GITHUBTOKEN: !Ref GithubToken
+      KMS_KEY_ID: !Ref KMSKey
+Outputs:
+  KMSKeyArn:
+    Description: KMS Key ARN
+    Value: !GetAtt 
+      - KMSKey
+      - Arn
