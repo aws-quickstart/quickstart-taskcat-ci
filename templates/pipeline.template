@@ -95,7 +95,7 @@ Resources:
                 - echo Entered the pre_build phase...
                 - echo Current directory is $CODEBUILD_SRC_DIR
                 - ls -la
-                - "export dirname=$(PWD##*/)"
+                - "export dirname=${!PWD##*/}"
                 - echo Directory name $dirname
                 - cd ..
                 - mv $dirname $PROJECTNAME
