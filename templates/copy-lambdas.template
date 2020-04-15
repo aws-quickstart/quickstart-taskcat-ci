@@ -18,6 +18,10 @@ Parameters:
       include numbers, lowercase letters, uppercase letters, and hyphens (-). It
       cannot start or end with a hyphen (-).
     Type: String
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
+    Type: String
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*$'
     ConstraintDescription: >-
@@ -29,6 +33,10 @@ Parameters:
       include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
     Type: String
+
+Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+
 Resources:
   CopyObjects:
     DependsOn:
@@ -41,7 +49,7 @@ Resources:
       DestBucket: !Ref LambdaZipsBucket
       Objects:
         - functions/package/lambda.zip
-      SourceBucket: !Ref QSS3BucketName
+      SourceBucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Prefix: !Ref QSS3KeyPrefix
     Type: 'AWS::CloudFormation::CustomResource'
   CopyObjectsFunction:
@@ -150,8 +158,9 @@ Resources:
               - Action:
                   - 's3:GetObject'
                 Effect: Allow
-                Resource:
-                  - !Sub 'arn:aws:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*'
+                Resource: !Sub
+                  - 'arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*'
+                  - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
               - Action:
                   - 's3:PutObject'
                   - 's3:DeleteObject'
@@ -163,8 +172,8 @@ Resources:
                   - 's3:GetBucketVersioning'
                 Effect: Allow
                 Resource:
-                  - !Sub 'arn:aws:s3:::${LambdaZipsBucket}/${QSS3KeyPrefix}*'
-                  - !Sub 'arn:aws:s3:::${LambdaZipsBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${LambdaZipsBucket}/${QSS3KeyPrefix}*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${LambdaZipsBucket}'
             Version: 2012-10-17
           PolicyName: object-copier
     DependsOn:
@@ -307,8 +316,8 @@ Resources:
                   - 's3:GetBucketVersioning'
                 Effect: Allow
                 Resource:
-                  - !Sub 'arn:aws:s3:::${BucketName}/*'
-                  - !Sub 'arn:aws:s3:::*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${BucketName}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::*'
             Version: 2012-10-17
           PolicyName: Empty-bucket
     Type: 'AWS::IAM::Role'

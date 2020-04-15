@@ -24,6 +24,10 @@
     "ParameterValue": "$[taskcat_autobucket]"
   },
   {
+    "ParameterKey": "QSS3BucketRegion",
+    "ParameterValue": "$[taskcat_current_region]"
+  },
+  {
     "ParameterKey": "QSS3KeyPrefix",
     "ParameterValue": "quickstart-taskcat-ci/"
   }
