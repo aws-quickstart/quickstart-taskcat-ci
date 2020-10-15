@@ -51,9 +51,13 @@ Resources:
               Configuration:
                 FunctionName: !Ref GitMergeLambda
                 UserParameters: !Sub >-
-                  { "owner": "${GitHubUser}", "repo": "${GitHubRepoName}",
-                  "baseBranch": "${ReleaseBranch}", "headBranch":
-                  "${SourceRepoBranch}" }
+                  {
+                  "owner": "${GitHubUser}",
+                  "repo": "${GitHubRepoName}",
+                  "baseBranch": "${ReleaseBranch}",
+                  "headBranch": "${SourceRepoBranch}",
+                  "tokenId": "${GitHubOAuthTokenId}"
+                  }
               RunOrder: 3
   CodeBuild:
     Type: 'AWS::CodeBuild::Project'
@@ -157,6 +161,10 @@ Parameters:
       https://github.com/settings/tokens
     Type: String
     NoEcho: 'true'
+  GitHubOAuthTokenId:
+    Description: GitHub OAuth Token Identifier
+    Type: String
+    Default: GithubToken_default
   ArtifactBucket:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-

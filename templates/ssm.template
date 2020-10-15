@@ -3,10 +3,14 @@ Description: >-
   This template creates KMS Key and use that key to create Secure string
   parameter in AWS Systems Manager.
 Parameters:
-  GithubToken:
+  GitHubOAuthToken:
     Description: GitHub OAuth Token
     Type: String
     NoEcho: 'true'
+  GitHubOAuthTokenId:
+    Description: GitHub OAuth Token Identifier
+    Type: String
+    Default: GithubToken_default
   LambdaZipsBucket:
     Description: Bucket name containing lambda zip files
     Type: String
@@ -147,7 +151,8 @@ Resources:
       ServiceToken: !GetAtt 
         - CreateSSMParamLambda
         - Arn
-      GITHUBTOKEN: !Ref GithubToken
+      GITHUB_TOKEN_ID: !Ref GitHubOAuthTokenId
+      GITHUB_TOKEN: !Ref GitHubOAuthToken
       KMS_KEY_ID: !Ref KMSKey
 Outputs:
   KMSKeyArn:

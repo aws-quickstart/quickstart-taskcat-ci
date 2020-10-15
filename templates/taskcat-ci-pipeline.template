@@ -27,7 +27,12 @@ Resources:
           - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
             S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        GithubToken: !Ref GitHubOAuthToken
+        GitHubOAuthToken: !Ref GitHubOAuthToken
+        GitHubOAuthTokenId: !Join 
+          - '_'
+          - - GithubToken
+            # Returns pseudo random string captured from cfn stack ARN
+            - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
         LambdaZipsBucket: !GetAtt 
           - CopyLambdasStack
           - Outputs.LambdaZipsBucket
@@ -45,7 +50,11 @@ Resources:
           - Outputs.LambdaZipsBucket
         S3Key: !Sub '${QSS3KeyPrefix}functions/package/lambda.zip'
       Description: Merge github branches
-      FunctionName: Git_Merge
+      FunctionName: !Join 
+        - '_'
+        - - GitMerge
+          # Returns pseudo random string captured from cfn stack ARN
+          - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
       Handler: !Join 
         - .
         - - git_merge
@@ -154,6 +163,11 @@ Resources:
         SourceRepoBranch: !Ref SourceRepoBranch
         ReleaseBranch: !Ref ReleaseBranch
         GitHubOAuthToken: !Ref GitHubOAuthToken
+        GitHubOAuthTokenId: !Join 
+          - '_'
+          - - GithubToken
+            # Returns pseudo random string captured from cfn stack ARN
+            - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
         ArtifactBucket: !Ref ArtifactBucket
         GitMergeLambda: !Ref GitMergeLambda
         CodePipelineRoleArn: !GetAtt 
