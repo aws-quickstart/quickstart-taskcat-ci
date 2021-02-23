@@ -35,11 +35,13 @@ def lambda_handler(event, context):
     # If it's a DELETE event
     if event['RequestType'] == 'Delete':
         try:
-            logger.debug('Deleting parameter - GITHUBTOKEN')
+            # Extract GITHUB TOKEN and TOKEN Id
+            github_token_id = event['ResourceProperties']['GITHUB_TOKEN_ID']
+            logger.debug('Deleting parameter - {}'.format(github_token_id))
             
-            # Delete GITHUBTOKEN securestring parameter
+            # Delete GITHUB TOKEN securestring parameter
             ssm.delete_parameter(
-                Name='GITHUBTOKEN'
+                Name=github_token_id
             )
             
             # Signal success
@@ -52,18 +54,19 @@ def lambda_handler(event, context):
         # If it's a CREATE event
         try:
             
-            # Extract GITHUBTOKEN
-            githubtoken = event['ResourceProperties']['GITHUBTOKEN']
+            # Extract GITHUB TOKEN and TOKEN Id
+            github_token_id = event['ResourceProperties']['GITHUB_TOKEN_ID']
+            github_token = event['ResourceProperties']['GITHUB_TOKEN']
             
             # Extract KMS KEY Resource Id
             kms_key_id = event['ResourceProperties']['KMS_KEY_ID']
-            logger.debug('Github token = {}, kms_key_id = {}'.format(githubtoken, kms_key_id))
+            logger.debug('Github token = {}, kms_key_id = {}'.format(github_token, kms_key_id))
             
-            # Create GITHUBTOKEN SecureString parameter
+            # Create GITHUB TOKEN SecureString parameter
             response_data = ssm.put_parameter(
-                Name='GITHUBTOKEN',
+                Name=github_token_id,
                 Description='Github token',
-                Value=githubtoken,
+                Value=github_token,
                 Type='SecureString',
                 KeyId=kms_key_id
             )

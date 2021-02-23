@@ -92,7 +92,12 @@ def get_user_params(job_data):
         # Validate that the repo name is provided, otherwise fail the job
         # with a helpful message.
         raise Exception('Your UserParameters JSON must include the repo name')
-    
+
+    if 'tokenId' not in decoded_parameters:
+        # Validate that the token id is provided, otherwise fail the job
+        # with a helpful message.
+        raise Exception('Your UserParameters JSON must include the token id')
+
     return decoded_parameters
 
 
@@ -151,9 +156,10 @@ def lambda_handler(event, context):
         repo_name = params['repo']
         base_branch = params['baseBranch']
         head_branch = params['headBranch']
-        
+        token_id = params['tokenId']
+              
         # Get github token from parameter store
-        github_token = get_ssm_parameter('GITHUBTOKEN')
+        github_token = get_ssm_parameter(token_id)
         
         # Construct merge endpoint
         global merge_endpoint
