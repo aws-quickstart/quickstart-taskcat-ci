@@ -96,6 +96,7 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: 'aws/codebuild/standard:1.0'
+        PrivilegedMode: true
         EnvironmentVariables:
           - Name: REPOURL
             Value: !Sub '${CodeCommitRepoUrl}'
@@ -145,7 +146,7 @@ Resources:
                     - ls -R
                     - cd ..
                     - echo Installing Taskcat using pip3...
-                    - pip install taskcat==0.9.20
+                    - pip install taskcat==0.9.23
                     - echo Verifying Taskcat installation...
                     - taskcat
                     - echo Configuring aws cli...
