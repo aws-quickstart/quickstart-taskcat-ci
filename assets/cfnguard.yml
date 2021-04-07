@@ -1,0 +1,35 @@
+version: 0.2
+env:
+  variables:
+    # Definining CloudFormation Teamplate and Ruleset as variables - part of the code repo
+    CF_TEMPLATE: "cfn_template_file_example.yaml"
+    CF_ORG_RULESET:  "cfn_guard_ruleset_example"
+phases:
+  install:
+    commands:
+      - apt-get update
+      - apt-get install build-essential -y
+      - apt-get install cargo -y
+      - apt-get install git -y
+  pre_build:
+    commands:
+      - echo "Setting up the environment for AWS CloudFormation Guard"
+      - echo "More info https://github.com/aws-cloudformation/cloudformation-guard"
+      - echo "Install Rust"
+      - curl https://sh.rustup.rs -sSf | sh -s -- -y
+  build:
+    commands:
+       - echo "Pull GA release from github"
+       - echo "More info https://github.com/aws-cloudformation/cloudformation-guard/releases"
+       - wget https://github.com/aws-cloudformation/cloudformation-guard/releases/download/1.0.0/cfn-guard-linux-1.0.0.tar.gz
+       - echo "Extract cfn-guard"
+       - tar xvf cfn-guard-linux-1.0.0.tar.gz .
+  post_build:
+    commands:
+       - echo "Validate CloudFormation template with cfn-guard tool"
+       - echo "More information https://github.com/aws-cloudformation/cloudformation-guard/blob/master/cfn-guard/README.md"
+       - cfn-guard-linux/cfn-guard check --rule_set $CF_ORG_RULESET --template $CF_TEMPLATE --strict-checks
+artifacts:
+  files:
+    - cfn_template_file_example.yaml
+  name: guard_templates
