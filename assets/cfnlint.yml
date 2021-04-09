@@ -1,23 +1,20 @@
 version: 0.2
 
+env:
+  variables:
+    templateloc: "./template/*.yaml"
 phases:
   install:
     commands:
       - echo Entered the install phase...
-      - apt-get update -y
+      - yum update -y
       - pip3 install --upgrade pip
-      - ln -s /usr/local/bin/pip /usr/bin/pip
   pre_build:
     commands:
       - echo Installing cfn-lint using pip3...
-      - pip install cfn-lint
+      - pip3 install cfn-lint
+      - echo $templateloc
   build:
     commands:
       - echo Entered the build phase...
-      - cd $PROJECTNAME
-    finally:
-      - ls -1 taskcat_outputs
-      - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/${LOG}; done
-      - echo Zipping and uploading report to $ARTIFACT_BUCKET S3 bucket
-      - zip -r taskcat_report.zip taskcat_outputs
-      - aws s3 cp taskcat_report.zip s3://$ARTIFACT_BUCKET/taskcat_reports/$CODEBUILD_BUILD_ID.zip
+      - cfn-lint -r $AWS_REGION -- $templateloc
