@@ -15,15 +15,15 @@ Resources:
               InputArtifacts: []
               ActionTypeId:
                 Category: Source
-                Owner: ThirdParty
+                Owner: AWS
                 Version: '1'
-                Provider: GitHub
+                Provider: CodeStarSourceConnection
               OutputArtifacts:
                 - Name: Source
               Configuration:
-                Owner: !Ref GitHubUser
-                Repo: !Ref GitHubRepoName
-                Branch: !Ref SourceRepoBranch
+                ConnectionArn: !Ref GitHubUser
+                FullRepositoryId: !Ref GitHubRepoName
+                BranchName: !Ref SourceRepoBranch
                 OAuthToken: !Ref GitHubOAuthToken
               RunOrder: 1
         - Name: Build
@@ -32,13 +32,13 @@ Resources:
               InputArtifacts:
                 - Name: Source
               ActionTypeId:
-                Category: Build
+                Category: Invoke
                 Owner: AWS
                 Version: '1'
-                Provider: CodeBuild
+                Provider: StepFunctions
               OutputArtifacts: []
               Configuration:
-                ProjectName: !Ref CodeBuild
+                StateMachineArn: !Ref CodeBuildStateMachine
               RunOrder: 2
         - Name: Deploy
           Actions:
@@ -50,14 +50,7 @@ Resources:
                 Provider: Lambda
               Configuration:
                 FunctionName: !Ref GitMergeLambda
-                UserParameters: !Sub >-
-                  {
-                  "owner": "${GitHubUser}",
-                  "repo": "${GitHubRepoName}",
-                  "baseBranch": "${ReleaseBranch}",
-                  "headBranch": "${SourceRepoBranch}",
-                  "tokenId": "${GitHubOAuthTokenId}"
-                  }
+                UserParameters: 
               RunOrder: 3
   CodeBuild:
     Type: 'AWS::CodeBuild::Project'
@@ -83,7 +76,7 @@ Resources:
             Value: !Ref ArtifactBucket
       Source:
         Type: CODEPIPELINE
-        BuildSpec: !Sub |
+        BuildSpec: |
           version: 0.2
 
           phases:
@@ -142,6 +135,75 @@ Resources:
                 - echo Zipping and uploading report to $ARTIFACT_BUCKET S3 bucket
                 - zip -r taskcat_report.zip taskcat_outputs
                 - aws s3 cp taskcat_report.zip s3://$ARTIFACT_BUCKET/taskcat_reports/$CODEBUILD_BUILD_ID.zip
+  CFNLintProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: A CodeBuild Project that runs cfn-lint against cfn templates
+      ServiceRole: !Ref CodeBuildRoleArn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+      Source:
+        Auth: 
+          Type: OAUTH
+        Type: GITHUB
+        Location: 
+        BuildSpec: cfnlintspec.yml
+      TimeoutInMinutes: 10
+  CFNGuardProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: A CodeBuild Project that runs cfn-guard against cfn templates
+      ServiceRole: !Ref CodeBuildRoleArn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: cfnguardspec.yml
+      TimeoutInMinutes: 10
+  CodeBuildStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !Ref CodeBuildRoleArn
+      TracingConfiguration:
+        Enabled: true
+      LoggingConfiguration:
+        #Destinations: { CloudWatchLogsLogGroup: CloudWatchLogsLogGroup }
+        IncludeExecutionData: true
+        Level: ALL
+      DefinitionString:
+        !Sub
+          - |-
+            {
+              "Comment": "An example of using CodeBuild to run tests, get test results and send a notification.",
+              "StartAt": "Run Linting",
+              "States": {
+                "Run Linting": {
+                  "Type": "Task",
+                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                  "Parameters": {
+                    "ProjectName": "${projectlint}"
+                  },
+                  "Next": "Run Compliance Check"
+                },
+                "Run Compliance Check": {
+                  "Type": "Task",
+                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                  "Parameters": {
+                    "ProjectName": "${projectguard}"
+                  },
+                  "End": true
+                }
+              }
+            }
+          - {projectlint: !Ref CFNLintProject, projectguard: !Ref CFNGuardProject}
 Parameters:
   GitHubUser:
     Description: Enter GitHub username of the repository owner
@@ -152,21 +214,6 @@ Parameters:
   SourceRepoBranch:
     Description: Enter the branch name to be monitored
     Type: String
-  ReleaseBranch:
-    Description: >-
-      Enter the release branch name. On successfull build, above branch will be
-      merged into this branch.
-    Type: String
-  GitHubOAuthToken:
-    Description: >-
-      Create a token with 'repo' and 'admin:repo_hook' permissions here
-      https://github.com/settings/tokens
-    Type: String
-    NoEcho: 'true'
-  GitHubOAuthTokenId:
-    Description: GitHub OAuth Token Identifier
-    Type: String
-    Default: GithubToken_default
   ArtifactBucket:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
