@@ -147,14 +147,10 @@ Resources:
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
       Source:
-<<<<<<< HEAD
         Auth: 
           Type: OAUTH
         Type: GITHUB
         Location: 
-=======
-        Type: CODEPIPELINE
->>>>>>> b110af57a7c830c5e693ef59fdf46cc31b89d5cf
         BuildSpec: cfnlintspec.yml
       TimeoutInMinutes: 10
   CFNGuardProject:
