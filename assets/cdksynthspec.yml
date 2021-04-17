@@ -1,0 +1,24 @@
+version: 0.2
+# Build
+phases:
+  install:
+    commands:
+      - npm install -g aws-cdk
+  build:
+    commands:
+      - cd ${CODEBUILD_SRC_DIR}
+      - npm install
+      - cdk synth -q
+      - tar -czf /tmp/app.tgz .
+artifacts:
+  files:
+  secondary-artifacts:
+    BuildArtifact:
+      files:
+        - 'deployspec.yaml'
+    application:
+      files:
+        - 'app.tgz'
+      discard-paths: yes
+      base-directory: '/tmp'
+      name: application/$(date +%Y-%m-%dT%H:%M:%SZ)/$CODEBUILD_RESOLVED_SOURCE_VERSION
