@@ -177,6 +177,7 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+      SourceVersion: !Ref SourceRepoBranch
       Source:
         Auth: 
           Type: OAUTH
@@ -195,6 +196,7 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+      SourceVersion: !Ref SourceRepoBranch
       Source:
         Auth: 
           Type: OAUTH
