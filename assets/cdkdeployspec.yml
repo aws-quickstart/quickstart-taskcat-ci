@@ -1,0 +1,13 @@
+version: 0.2
+# Deployment steps
+phases:
+  install:
+    commands:
+      - npm install -g aws-cdk
+      - cdk --version
+  build:
+    commands:
+      - cd ${CODEBUILD_SRC_DIR_application} # this is cdk directory
+      - tar xzvf app.tgz
+      - cdk ls
+      - cdk deploy
