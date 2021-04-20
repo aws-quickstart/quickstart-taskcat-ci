@@ -208,6 +208,8 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: 7
+  SNSTopic:
+    Type: AWS::SNS::Topic
   CodeBuildStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
@@ -229,23 +231,57 @@ Resources:
               "States": {
                 "Run Linting": {
                   "Type": "Task",
-                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                  "Resource": "arn:aws:states:::codebuild:startBuild.sync",
                   "Parameters": {
                     "ProjectName": "${projectlint}"
                   },
-                  "Next": "Run Compliance Check"
+                  "Next": "Lint Tests Passed?"
+                },
+                "Lint Tests Passed?": {
+                  "Type": "Choice",
+                  "Choices": [
+                    {
+                      "Variable": "$.Build.BuildStatus",
+                      "StringEquals": "SUCCEEDED",
+                      "Next": "Run Compliance Check"
+                    }
+                  ],
+                  "Default": "Notify Failure"
                 },
                 "Run Compliance Check": {
                   "Type": "Task",
-                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                  "Resource": "arn:aws:states:::codebuild:startBuild.sync",
                   "Parameters": {
                     "ProjectName": "${projectguard}"
+                  },
+                  "Next": "Guard Tests Passed?"
+                },
+                "Guard Tests Passed?": {
+                  "Type": "Choice",
+                  "Choices": [
+                    {
+                      "Variable": "$.Build.BuildStatus",
+                      "StringEquals": "SUCCEEDED",
+                      "Next": "SuccessState"
+                    }
+                  ],
+                  "Default": "Notify Failure"
+                },
+                "SuccessState": {
+                  "Type": "Succeed"
+                },
+                "Notify Failure": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::sns:publish",
+                  "Parameters": {
+                    "Message": "CodeBuild build tests failed",
+                    "TopicArn": "${snsTopicArn}"
                   },
                   "End": true
                 }
               }
             }
-          - {projectlint: !Ref CFNLintProject, projectguard: !Ref CFNGuardProject}
+          - {snsTopicArn: !Ref SNSTopic, projectlint: !Ref CFNLintProject, projectguard: !Ref CFNGuardProject}
 Outputs:
   CodePipelineName:
     Description: Pipeline  name
