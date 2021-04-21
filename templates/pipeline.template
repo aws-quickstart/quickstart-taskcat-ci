@@ -81,6 +81,7 @@ Resources:
             Value: !Sub '${SourceRepoBranch}'
           - Name: ARTIFACT_BUCKET
             Value: !Ref ArtifactBucket
+        PrivilegedMode: true
       Source:
         Type: CODEPIPELINE
         BuildSpec: !Sub |
