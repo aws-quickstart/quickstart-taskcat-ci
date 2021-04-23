@@ -167,7 +167,7 @@ Resources:
                         echo Quickstart Passed!
                         exit 0
                         fi
-                    - echo Merging branch develop into master..
+                    - echo Merging branch develop into main..
                     - aws codecommit merge-branches-by-fast-forward --source-commit-specifier $SOURCEBRANCH --destination-commit-specifier $RELEASEBRANCH --repository-name $PROJECTNAME
                     - echo Merge Successfull !!
 Parameters:

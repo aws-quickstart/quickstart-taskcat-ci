@@ -71,7 +71,7 @@ Parameters:
       Enter the release branch name. On successfull build, above branch will be
       merged into this branch.
     Type: String
-    Default: master
+    Default: main
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
