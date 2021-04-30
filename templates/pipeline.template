@@ -20,12 +20,12 @@ Parameters:
 #  GitMergeLambda:
 #    Description: Name of the GitMerge Lambda function
 #    Type: String
-  CodeStarConnectionArn:
-    Description: CodeStar Connection ARN
-    Type: String
-  CodePipelineRoleArn:
-    Description: Code Pipeline service role ARN
-    Type: String
+#  CodeStarConnectionArn:
+#    Description: CodeStar Connection ARN
+#    Type: String
+#  CodePipelineRoleArn:
+#    Description: Code Pipeline service role ARN
+#    Type: String
   CodeBuildRoleArn:
     Description: Code Build service role ARN
     Type: String
@@ -33,56 +33,6 @@ Parameters:
     Description: Step Functions service role ARN
     Type: String
 Resources:
-  CodePipeline:
-    Type: 'AWS::CodePipeline::Pipeline'
-    Properties:
-      ArtifactStore:
-        Type: S3
-        Location: !Ref ArtifactBucket
-      RoleArn: !Ref CodePipelineRoleArn
-      Stages:
-        - Name: Source
-          Actions:
-            - Name: GitHub
-              InputArtifacts: []
-              ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Version: '1'
-                Provider: CodeStarSourceConnection
-              OutputArtifacts:
-                - Name: Source
-              Configuration:
-                ConnectionArn: !Ref CodeStarConnectionArn
-                FullRepositoryId: !Sub '${GitHubUser}/${GitHubRepoName}'
-                BranchName: !Ref SourceRepoBranch
-              RunOrder: 1
-        - Name: Build
-          Actions:
-            - Name: CodeBuild
-              InputArtifacts:
-                - Name: Source
-              ActionTypeId:
-                Category: Invoke
-                Owner: AWS
-                Version: '1'
-                Provider: StepFunctions
-              OutputArtifacts: []
-              Configuration:
-                StateMachineArn: !Ref CodeBuildStateMachine
-              RunOrder: 2
-#        - Name: Deploy
-#          Actions:
-#            - Name: Git-merge
-#              ActionTypeId:
-#                Category: Invoke
-#                Owner: AWS
-#                Version: '1'
-#                Provider: Lambda
-#              Configuration:
-#                FunctionName: !Ref GitMergeLambda
-#                UserParameters: 
-#              RunOrder: 3
 #  CodeBuild:
 #    Type: 'AWS::CodeBuild::Project'
 #    Properties:
@@ -166,43 +116,65 @@ Resources:
 #                - echo Zipping and uploading report to $ARTIFACT_BUCKET S3 bucket
 #                - zip -r taskcat_report.zip taskcat_outputs
 #                - aws s3 cp taskcat_report.zip s3://$ARTIFACT_BUCKET/taskcat_reports/$CODEBUILD_BUILD_ID.zip
-  CFNLintProject:
-    Type: AWS::CodeBuild::Project
+  CodeBuild:
+    Type: 'AWS::CodeBuild::Project'
     Properties:
-      Description: A CodeBuild Project that runs cfn-lint against cfn templates
+      Description: !Sub 'Submit build jobs for ${GitHubRepoName} as part of CI/CD pipeline'
       ServiceRole: !Ref CodeBuildRoleArn
       Artifacts:
-        Type: NO_ARTIFACTS
+        Type: S3
+        Location: !Sub '${ArtifactBucket}'
+        Name: cfnrepo.zip
+        Packaging: ZIP
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        EnvironmentVariables:
+          - Name: ARTIFACT_BUCKET
+            Value: !Ref ArtifactBucket
       SourceVersion: !Ref SourceRepoBranch
       Source:
         Auth: 
           Type: OAUTH
         Type: GITHUB
         Location: !Sub 'https://github.com/${GitHubUser}/${GitHubRepoName}.git'
+        BuildSpec: !Sub | 
+          version: 0.2
+          phases:
+            install:
+              commands:
+                - yum install jq
+            build:
+              commands:
+                - echo Entered the build phase...
+                - START_TIME=$(date +%s)
+                - HEX_TIME=$(printf '%x\n' $START_TIME)
+                - GUID=$(dd if=/dev/random bs=12 count=1 2>/dev/null | od -An -tx1 | tr -d ' \t\n')
+                - TRACE_ID="1-$HEX_TIME-$GUID"
+                - CDKProject=$( jq '.cfnpipeline' cfnpipeline.json )
+                - aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input '$CDKProject' --trace-header '$TRACE_ID'
+            artifacts:
+              files:
+                - '**/*'
+  CFNProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: A CodeBuild Project that runs cfn-lint,cfn-guard or CDK Commands
+      ServiceRole: !Ref CodeBuildRoleArn
+      Artifacts:
+        Type: S3
+        Location: !Sub '${ArtifactBucket}'
+        Name: cfnrepo.zip
+        Packaging: ZIP
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+      Source:
+        Type: S3
+        Location: !Sub '${ArtifactBucket}/cfnrepo.zip'
         BuildSpec: cfnlintspec.yml
-      TimeoutInMinutes: 10
-  CFNGuardProject:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Description: A CodeBuild Project that runs cfn-guard against cfn templates
-      ServiceRole: !Ref CodeBuildRoleArn
-      Artifacts:
-        Type: NO_ARTIFACTS
-      Environment:
-        Type: LINUX_CONTAINER
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
-      SourceVersion: !Ref SourceRepoBranch
-      Source:
-        Auth: 
-          Type: OAUTH
-        Type: GITHUB
-        Location: !Sub 'https://github.com/${GitHubUser}/${GitHubRepoName}.git'
-        BuildSpec: cfnguardspec.yml
       TimeoutInMinutes: 10
   StatesLogGroup: 
     Type: AWS::Logs::LogGroup
@@ -227,13 +199,33 @@ Resources:
           - |-
             {
               "Comment": "An example of using CodeBuild to run tests, get test results and send a notification.",
-              "StartAt": "Run Linting",
+              "StartAt": "CDK Project?",
               "States": {
+                "CDK Project?": {
+                  "Type": "Choice",
+                  "Choices": [
+                    {
+                      "Variable": "$.CDKProject",
+                      "StringEquals": "TRUE",
+                      "Next": "CDK Synth"
+                    }
+                  ],
+                  "Default": "Run Linting"
+                },
+                "CDK Synth": {
+                  "Type": "Task",
+                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                  "Parameters": {
+                    "ProjectName": "${cfnProject}",
+                    "BuildspecOverride": "specfiles/cdksynthspec.yml"
+                  },
+                  "Next": "Run Linting"
+                },
                 "Run Linting": {
                   "Type": "Task",
-                  "Resource": "arn:aws:states:::codebuild:startBuild.sync",
+                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
                   "Parameters": {
-                    "ProjectName": "${projectlint}"
+                    "ProjectName": "${cfnProject}"
                   },
                   "Next": "Lint Tests Passed?"
                 },
@@ -250,9 +242,10 @@ Resources:
                 },
                 "Run Compliance Check": {
                   "Type": "Task",
-                  "Resource": "arn:aws:states:::codebuild:startBuild.sync",
+                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
                   "Parameters": {
-                    "ProjectName": "${projectguard}"
+                    "ProjectName": "${cfnProject}",
+                    "BuildspecOverride": "cfnguardspec.yml"
                   },
                   "Next": "Guard Tests Passed?"
                 },
@@ -272,7 +265,7 @@ Resources:
                 },
                 "Notify Failure": {
                   "Type": "Task",
-                  "Resource": "arn:aws:states:::sns:publish",
+                  "Resource": "arn:${AWS::Partition}:states:::sns:publish",
                   "Parameters": {
                     "Message": "CodeBuild build tests failed",
                     "TopicArn": "${snsTopicArn}"
@@ -281,8 +274,8 @@ Resources:
                 }
               }
             }
-          - {snsTopicArn: !Ref SNSTopic, projectlint: !Ref CFNLintProject, projectguard: !Ref CFNGuardProject}
-Outputs:
-  CodePipelineName:
-    Description: Pipeline  name
-    Value: !Ref CodePipeline
+          - {snsTopicArn: !Ref SNSTopic, cfnProject: !Ref CFNProject }
+#Outputs:
+#  CodePipelineName:
+#    Description: Pipeline  name
+#    Value: !Ref CodePipeline
