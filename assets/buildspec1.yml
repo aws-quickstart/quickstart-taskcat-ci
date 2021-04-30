@@ -1,0 +1,17 @@
+version: 0.2
+phases:
+  install:
+    commands:
+      - yum install jq
+  build:
+    commands:
+      - echo Entered the build phase...
+      - START_TIME=$(date +%s)
+      - HEX_TIME=$(printf '%x\n' $START_TIME)
+      - GUID=$(dd if=/dev/random bs=12 count=1 2>/dev/null | od -An -tx1 | tr -d ' \t\n')
+      - TRACE_ID="1-$HEX_TIME-$GUID"
+      - CDKProject=$( jq '.cfnpipeline' cfnpipeline.json ))
+      - aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input '$CDKProject' --trace-header '$TRACE_ID'
+  artifacts:
+    files:
+      - '**/*'

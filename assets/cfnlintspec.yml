@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    templateloc: "./template/*.yaml"
+    templateloc: "./templates/*.yaml"
 phases:
   install:
     commands:

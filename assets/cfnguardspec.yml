@@ -2,8 +2,8 @@ version: 0.2
 env:
   variables:
     # Definining CloudFormation Teamplate and Ruleset as variables - part of the code repo
-    CF_TEMPLATE: "template/SampleProject.yaml"
-    CF_ORG_RULESET:  "template/cfn_guard_ruleset_example"
+    CF_TEMPLATE: "templates/SampleProject.yaml"
+    CF_ORG_RULESET:  "templates/cfn_guard_ruleset_example"
 phases:
   install:
     commands:

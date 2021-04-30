@@ -8,7 +8,7 @@ phases:
     commands:
       - cd ${CODEBUILD_SRC_DIR}
       - npm install
-      - cdk synth -q
+      - cdk synth -o ${CODEBUILD_SRC_DIR}/templates
       - tar -czf /tmp/app.tgz .
 artifacts:
   files:
