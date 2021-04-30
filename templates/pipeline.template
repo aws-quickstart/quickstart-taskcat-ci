@@ -10,6 +10,7 @@ Parameters:
   SourceRepoBranch:
     Description: Enter the branch name to be monitored
     Type: String
+    Default: main
   ArtifactBucket:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
