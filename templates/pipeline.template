@@ -21,7 +21,7 @@ Parameters:
   CodeBuildRoleArn:
     Description: Code Build service role ARN
     Type: String
-  StepFunctionsArn:
+  StepFunctionsRoleArn:
     Description: Step Functions service role ARN
     Type: String
 Resources:
@@ -97,7 +97,7 @@ Resources:
   CodeBuildStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
-      RoleArn: !Ref StepFunctionsArn
+      RoleArn: !Ref StepFunctionsRoleArn
       TracingConfiguration:
         Enabled: true
       LoggingConfiguration:
