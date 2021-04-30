@@ -152,11 +152,11 @@ Resources:
                 - HEX_TIME=$(printf '%x\n' $START_TIME)
                 - GUID=$(dd if=/dev/random bs=12 count=1 2>/dev/null | od -An -tx1 | tr -d ' \t\n')
                 - TRACE_ID="1-$HEX_TIME-$GUID"
-                - CDKProject=$( jq '.cfnpipeline' cfnpipeline.json )
-                - aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input '$CDKProject' --trace-header '$TRACE_ID'
-            artifacts:
-              files:
-                - '**/*'
+                - CDKProject=$( jq -r '.cfnpipeline | tostring' cfnpipeline.json )
+                - aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input $CDKProject --trace-header $TRACE_ID
+          artifacts:
+            files:
+              - '**/*'
   CFNProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -205,8 +205,8 @@ Resources:
                   "Type": "Choice",
                   "Choices": [
                     {
-                      "Variable": "$.CDKProject",
-                      "StringEquals": "TRUE",
+                      "Variable": "$.cdkproject",
+                      "StringEquals": "true",
                       "Next": "CDK Synth"
                     }
                   ],
