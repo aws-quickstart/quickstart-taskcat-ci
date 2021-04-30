@@ -53,6 +53,9 @@ Resources:
             install:
               commands:
                 - yum install jq util-linux
+                - curl -L https://github.com/bronze1man/yaml2json/releases/download/v1.3/yaml2json_linux_amd64 > yaml2json
+                - chmod +x yaml2json
+                - if [ -r pipeline.yaml ]; then ./yaml2json pipeline.yaml > pipeline.json; fi
             build:
               commands:
                 - echo Entered the build phase...
