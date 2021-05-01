@@ -54,9 +54,9 @@ Resources:
             install:
               commands:
                 - yum install jq util-linux
-                - curl -L https://github.com/bronze1man/yaml2json/releases/download/v1.3/yaml2json_linux_amd64 > yaml2json
+                - curl -sL https://github.com/bronze1man/yaml2json/releases/download/v1.3/yaml2json_linux_amd64 > yaml2json
                 - chmod +x yaml2json
-                - if [ -r pipeline.yaml ]; then ./yaml2json pipeline.yaml > pipeline.json; fi
+                - (echo 'CodeBuildTriggerMetadata:' && env |grep CODEBUILD |sed 's/^/    /g;s/=/: "/g; s/$/"/g') >> .pipeline.yaml
             build:
               commands:
                 - echo Entered the build phase...
@@ -64,8 +64,7 @@ Resources:
                 - HEX_TIME=$(printf '%x\n' $START_TIME)
                 - GUID=$(uuidgen -r |tr -d -)
                 - TRACE_ID="1-$HEX_TIME-$GUID"
-                - CDKProject=$( jq -r '.cfnpipeline | tostring' cfnpipeline.json )
-                - aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input $CDKProject --trace-header $TRACE_ID
+                - aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input $(./yaml2json <.pipeline.yaml) --trace-header $TRACE_ID
           artifacts:
             files:
               - '**/*'
@@ -117,8 +116,8 @@ Resources:
                   "Type": "Choice",
                   "Choices": [
                     {
-                      "Variable": "$.cdkproject",
-                      "StringEquals": "true",
+                      "Variable": "$.pipeline.cdkprojectpath",
+                      "IsPresent": true,
                       "Next": "CDK Synth"
                     }
                   ],
