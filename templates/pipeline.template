@@ -33,7 +33,7 @@ Resources:
       Artifacts:
         Type: S3
         Location: !Sub '${ArtifactBucket}'
-        Name: cfnrepo.zip
+        Name: !Sub ${AWS::StackName}repo.zip
         Packaging: ZIP
       Environment:
         Type: LINUX_CONTAINER
@@ -73,7 +73,7 @@ Resources:
       Artifacts:
         Type: S3
         Location: !Sub '${ArtifactBucket}'
-        Name: cfnrepo.zip
+        Name: !Sub ${AWS::StackName}repo.zip
         Packaging: ZIP
       Environment:
         Type: LINUX_CONTAINER
@@ -81,7 +81,7 @@ Resources:
         Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
       Source:
         Type: S3
-        Location: !Sub '${ArtifactBucket}/cfnrepo.zip'
+        Location: !Sub '${ArtifactBucket}/${AWS::StackName}repo.zip'
         BuildSpec: .cfnlintspec.yml
       TimeoutInMinutes: 10
   StatesLogGroup: 
