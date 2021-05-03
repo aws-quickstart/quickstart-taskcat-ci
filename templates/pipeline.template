@@ -42,6 +42,12 @@ Resources:
         EnvironmentVariables:
           - Name: ARTIFACT_BUCKET
             Value: !Ref ArtifactBucket
+      Triggers:
+        BuildType: BUILD
+        Webhook: true
+        FilterGroups:
+          - - Type: EVENT
+              Pattern: PUSH
       SourceVersion: !Ref SourceRepoBranch
       Source:
         Auth: 
