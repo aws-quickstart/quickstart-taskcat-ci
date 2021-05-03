@@ -53,21 +53,18 @@ Resources:
           phases:
             install:
               commands:
-                - yum install jq util-linux
-                - curl -sL https://github.com/bronze1man/yaml2json/releases/download/v1.3/yaml2json_linux_amd64 > yaml2json
-                - chmod +x yaml2json
-                - (echo 'CodeBuildTriggerMetadata:' && env |grep CODEBUILD |sed 's/^/    /g;s/=/: "/g; s/$/"/g') >> .pipeline.yaml
+                - "yum install jq util-linux"
+                - "curl -sL https://github.com/bronze1man/yaml2json/releases/download/v1.3/yaml2json_linux_amd64 > yaml2json"
+                - "chmod +x yaml2json"
+                - "(echo 'CodeBuildTriggerMetadata:' && env |grep CODEBUILD|sed 's/^/    /g;s/=/: \"/; s/$/\"/g') >> .pipeline.yaml"
             build:
               commands:
-                - echo Entered the build phase...
-                - START_TIME=$(date +%s)
-                - HEX_TIME=$(printf '%x\n' $START_TIME)
-                - GUID=$(uuidgen -r |tr -d -)
-                - TRACE_ID="1-$HEX_TIME-$GUID"
-                - aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input $(./yaml2json <.pipeline.yaml) --trace-header $TRACE_ID
-          artifacts:
-            files:
-              - '**/*'
+                - "echo Entered the build phase..."
+                - "START_TIME=$(date +%s)"
+                - "HEX_TIME=$(printf '%x\\n' $START_TIME)"
+                - "GUID=$(uuidgen -r |tr -d -)"
+                - 'TRACE_ID="1-$HEX_TIME-$GUID"'
+                - 'aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input "$(./yaml2json <.pipeline.yaml)" --trace-header $TRACE_ID'
   CFNProject:
     Type: AWS::CodeBuild::Project
     Properties:
