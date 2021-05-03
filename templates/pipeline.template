@@ -82,7 +82,7 @@ Resources:
       Source:
         Type: S3
         Location: !Sub '${ArtifactBucket}/${AWS::StackName}repo.zip'
-        BuildSpec: .cfnlintspec.yml
+        BuildSpec: .cfnlintspec.yaml
       TimeoutInMinutes: 10
   StatesLogGroup: 
     Type: AWS::Logs::LogGroup
@@ -125,7 +125,7 @@ Resources:
                   "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
                   "Parameters": {
                     "ProjectName": "${cfnProject}",
-                    "BuildspecOverride": "specfiles/cdksynthspec.yml"
+                    "BuildspecOverride": "specfiles/cdksynthspec.yaml"
                   },
                   "Next": "Run Linting"
                 },
@@ -153,7 +153,7 @@ Resources:
                   "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
                   "Parameters": {
                     "ProjectName": "${cfnProject}",
-                    "BuildspecOverride": ".cfnguardspec.yml"
+                    "BuildspecOverride": ".cfnguardspec.yaml"
                   },
                   "Next": "Guard Tests Passed?"
                 },
