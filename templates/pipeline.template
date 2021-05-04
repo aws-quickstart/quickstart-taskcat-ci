@@ -88,7 +88,22 @@ Resources:
       Source:
         Type: S3
         Location: !Sub '${ArtifactBucket}/${AWS::StackName}repo.zip'
-        BuildSpec: .cfnlintspec.yaml
+        BuildSpec: | 
+          version: 0.2
+
+          env:
+            variables:
+              templateloc: "./infra/*.yaml"
+          phases:
+            install:
+              commands:
+                - echo Installing cfn-lint using pip3...
+                - pip3 install cfn-lint
+                - 'echo "$templateloc"'
+            build:
+              commands:
+                - echo Linting templates if they exist
+                - 'test -n "$(shopt -s nullglob; echo "$templateloc")" && cfn-lint -r $AWS_REGION -- "$templateloc" && echo lint succeeded'
       TimeoutInMinutes: 10
   StatesLogGroup: 
     Type: AWS::Logs::LogGroup
