@@ -71,6 +71,9 @@ Resources:
                 - "GUID=$(uuidgen -r |tr -d -)"
                 - 'TRACE_ID="1-$HEX_TIME-$GUID"'
                 - 'aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input "$(./yaml2json <.pipeline.yaml)" --trace-header $TRACE_ID'
+          artifacts:
+            files:
+              - '**/*'
   CFNProject:
     Type: AWS::CodeBuild::Project
     Properties:
