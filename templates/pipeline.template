@@ -144,7 +144,7 @@ Resources:
                       "Next": "CDK Synth"
                     }
                   ],
-                  "Default": "Run Linting"
+                  "Default": "Run IaC Linting"
                 },
                 "CDK Synth": {
                   "Type": "Task",
@@ -153,21 +153,22 @@ Resources:
                     "ProjectName": "${cfnProject}",
                     "BuildspecOverride": "specfiles/cdksynthspec.yaml"
                   },
-                  "Next": "Run Linting"
+                  "Next": "Run IaC Linting"
                 },
-                "Run Linting": {
+                "Run IaC Linting": {
                   "Type": "Task",
                   "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
                   "Parameters": {
                     "ProjectName": "${cfnProject}"
                   },
+                  "ResultPath": "$.iacLintResult",
                   "Next": "Lint Tests Passed?"
                 },
                 "Lint Tests Passed?": {
                   "Type": "Choice",
                   "Choices": [
                     {
-                      "Variable": "$.Build.BuildStatus",
+                      "Variable": "$.iacLintResult.Build.BuildStatus",
                       "StringEquals": "SUCCEEDED",
                       "Next": "Run Compliance Check"
                     }
@@ -181,13 +182,14 @@ Resources:
                     "ProjectName": "${cfnProject}",
                     "BuildspecOverride": ".cfnguardspec.yaml"
                   },
+                  "ResultPath": "$.complianceCheckResult",
                   "Next": "Guard Tests Passed?"
                 },
                 "Guard Tests Passed?": {
                   "Type": "Choice",
                   "Choices": [
                     {
-                      "Variable": "$.Build.BuildStatus",
+                      "Variable": "$.complianceCheckResult.Build.BuildStatus",
                       "StringEquals": "SUCCEEDED",
                       "Next": "SuccessState"
                     }
@@ -204,7 +206,10 @@ Resources:
                     "Message": "CodeBuild build tests failed",
                     "TopicArn": "${snsTopicArn}"
                   },
-                  "End": true
+                  "Next": "FailureState"
+                },
+                "FailureState": {
+                  "Type": "Fail"
                 }
               }
             }
