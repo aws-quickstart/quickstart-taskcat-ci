@@ -63,6 +63,8 @@ Resources:
                 - "curl -sL https://github.com/bronze1man/yaml2json/releases/download/v1.3/yaml2json_linux_amd64 > yaml2json"
                 - "chmod +x yaml2json"
                 - "(echo 'CodeBuildTriggerMetadata:' && env |grep CODEBUILD|sed 's/^/    /g;s/=/: \"/; s/$/\"/g') >> .pipeline.yaml"
+                # TODO: Change this to actual quickstart location. Use parameter to trigger whether this will overwrite an existing file
+                - "curl -sL https://github.com/elerch/quickstart-taskcat-ci/blob/iaccompliance/assets/.cfnguardspec.yaml > .cfnguardspec.yaml"
             build:
               commands:
                 - "echo Entered the build phase..."
