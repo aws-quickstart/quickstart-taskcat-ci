@@ -12,7 +12,7 @@ phases:
   build:
     commands:
       # TODO: Allow guard ruleset to be specified in the repo
-      - "curl -sL https://github.com/elerch/quickstart-taskcat-ci/blob/iaccompliance/assets/cfn_guard_ruleset > cfn_guard_ruleset"
+      - "curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/iaccompliance/assets/cfn_guard_ruleset > cfn_guard_ruleset"
       - echo "Extract cfn-guard"
       - tar xvf cfn-guard-linux-1.0.0.tar.gz .
   post_build:
@@ -20,7 +20,3 @@ phases:
       - echo "Validate CloudFormation template with cfn-guard tool"
       - echo "More information https://github.com/aws-cloudformation/cloudformation-guard/blob/master/cfn-guard/README.md"
       - 'for file in infra/*.yaml; do echo "$file"; cfn-guard-linux/cfn-guard check --rule_set $CF_ORG_RULESET --template "$file" --strict-checks; done'
-#artifacts:
-#  files:
-#    - cfn_template_file_example.yaml
-#  name: guard_templates
