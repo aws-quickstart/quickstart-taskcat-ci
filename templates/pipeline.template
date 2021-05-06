@@ -115,7 +115,9 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: 7
-  SNSTopic:
+  SNSFailureTopic:
+    Type: AWS::SNS::Topic
+  SNSSuccessTopic:
     Type: AWS::SNS::Topic
   CodeBuildStateMachine:
     Type: AWS::StepFunctions::StateMachine
@@ -133,7 +135,7 @@ Resources:
         !Sub
           - |-
             {
-              "Comment": "An example of using CodeBuild to run tests, get test results and send a notification.",
+              "Comment": "Use CodeBuild to run tests, get test results and send a notification on failure.",
               "StartAt": "CDK Project?",
               "States": {
                 "CDK Project?": {
@@ -145,7 +147,7 @@ Resources:
                       "Next": "CDK Synth"
                     }
                   ],
-                  "Default": "Run IaC Linting"
+                  "Default": "Stage 1"
                 },
                 "CDK Synth": {
                   "Type": "Task",
@@ -154,58 +156,69 @@ Resources:
                     "ProjectName": "${cfnProject}",
                     "BuildspecOverride": "specfiles/cdksynthspec.yaml"
                   },
-                  "Next": "Run IaC Linting"
+                  "Next": "Stage 1"
                 },
-                "Run IaC Linting": {
-                  "Type": "Task",
-                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
-                  "Parameters": {
-                    "ProjectName": "${cfnProject}"
-                  },
-                  "ResultPath": "$.iacLintResult",
-                  "Next": "Lint Tests Passed?"
-                },
-                "Lint Tests Passed?": {
-                  "Type": "Choice",
-                  "Choices": [
+                "Stage 1": {
+                  "Type": "Parallel",
+                  "Branches": [
                     {
-                      "Variable": "$.iacLintResult.Build.BuildStatus",
-                      "StringEquals": "SUCCEEDED",
-                      "Next": "Run Compliance Check"
+                      "StartAt": "Run IaC Linting",
+                      "States": {
+                        "Run IaC Linting": {
+                          "Type": "Task",
+                          "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                          "Parameters": {
+                            "ProjectName": "${cfnProject}"
+                          },
+                          "ResultPath": "$.iacLintResult",
+                          "End": true
+                        }
+                      }
+                    },
+                    {
+                      "StartAt": "Run Compliance Check",
+                      "States": {
+                        "Run Compliance Check": {
+                          "Type": "Task",
+                          "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                          "Parameters": {
+                            "ProjectName": "${cfnProject}",
+                            "BuildspecOverride": ".cfnguardspec.yaml"
+                          },
+                          "ResultPath": "$.complianceCheckResult",
+                          "End": true
+                        }
+                      }
                     }
                   ],
-                  "Default": "Notify Failure"
-                },
-                "Run Compliance Check": {
-                  "Type": "Task",
-                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
-                  "Parameters": {
-                    "ProjectName": "${cfnProject}",
-                    "BuildspecOverride": ".cfnguardspec.yaml"
-                  },
-                  "ResultPath": "$.complianceCheckResult",
-                  "Next": "Guard Tests Passed?"
-                },
-                "Guard Tests Passed?": {
-                  "Type": "Choice",
-                  "Choices": [
+                  "Catch": [
                     {
-                      "Variable": "$.complianceCheckResult.Build.BuildStatus",
-                      "StringEquals": "SUCCEEDED",
-                      "Next": "SuccessState"
+                      "ErrorEquals": [
+                        "States.TaskFailed"
+                      ],
+                      "ResultPath": "$.errorInfo",
+                      "Next": "Notify Failure"
                     }
                   ],
-                  "Default": "Notify Failure"
+                  "Next": "Notify Success"
                 },
-                "SuccessState": {
-                  "Type": "Succeed"
+                "Notify Success": {
+                  "Type": "Task",
+                  "Resource": "arn:${AWS::Partition}:states:::sns:publish",
+                  "Parameters": {
+                    "Subject": "Pipeline completed successfully",
+                    "Message.$": "$",
+                    "TopicArn": "${snsSuccessTopicArn}"
+                  },
+                  "End": true
                 },
                 "Notify Failure": {
                   "Type": "Task",
                   "Resource": "arn:${AWS::Partition}:states:::sns:publish",
                   "Parameters": {
-                    "Message": "CodeBuild build tests failed",
-                    "TopicArn": "${snsTopicArn}"
+                    "Subject": "Pipeline stage failed",
+                    "Message.$": "$.errorInfo.Cause",
+                    "TopicArn": "${snsFailureTopicArn}"
                   },
                   "Next": "FailureState"
                 },
@@ -214,4 +227,4 @@ Resources:
                 }
               }
             }
-          - {snsTopicArn: !Ref SNSTopic, cfnProject: !Ref CFNProject }
+          - {snsSuccessTopicArn: !Ref SNSSuccessTopic, snsFailureTopicArn: !Ref SNSFailureTopic, cfnProject: !Ref CFNProject }
