@@ -98,17 +98,18 @@ Resources:
 
           env:
             variables:
-              templateloc: "./infra/*.yaml"
+              templateloc: "./infra"
           phases:
             install:
               commands:
                 - echo Installing cfn-lint using pip3...
                 - pip3 install cfn-lint
-                - 'echo "$templateloc"'
+                - curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/main/assets/cfn-lint-directory > ./cfn-lint-directory
+                - chmod 755 ./cfn-lint-directory
             build:
               commands:
-                - echo Linting templates if they exist
-                - 'test -n "$(shopt -s nullglob; echo "$templateloc")" && cfn-lint -r $AWS_REGION -- "$templateloc" && echo lint succeeded'
+                - echo Linting templates in $templateloc if they exist
+                - ./cfn-lint-directory $templateloc
       TimeoutInMinutes: 10
   StatesLogGroup: 
     Type: AWS::Logs::LogGroup
