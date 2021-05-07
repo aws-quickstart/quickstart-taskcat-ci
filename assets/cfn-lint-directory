@@ -6,7 +6,9 @@ mkdir -p "$templateloc"
 cd "$templateloc" || exit 1
 if [ -n "$(echo ./*.@(json|yml|yaml))" ]; then
   echo "linting: *.@(json|yml|yaml)"
-  echo cfn-lint -r "$AWS_REGION" -- *.@(json|yml|yaml)
+  cfn-lint -r "$AWS_REGION" -- *.@(json|yml|yaml)
+  rc=$?
+  [ $rc -gt 0 ] && exit $rc
   echo "done"
 else
   echo "no files to lint"
