@@ -195,7 +195,7 @@ Resources:
                   "Type": "Choice",
                   "Choices": [
                     {
-                      "Variable": "$.pipeline.cdkprojectpath",
+                      "Variable": "$.Pipeline.cdkprojectpath",
                       "IsPresent": true,
                       "Next": "CDK Synth"
                     }
