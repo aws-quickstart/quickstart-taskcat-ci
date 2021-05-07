@@ -28,13 +28,14 @@ Resources:
   CodeBuild:
     Type: 'AWS::CodeBuild::Project'
     Properties:
-      Description: !Sub 'Submit build jobs for ${GitHubRepoName} as part of CI/CD pipeline'
+      Description: !Sub 'Trigger StepFunctions CI/CD for ${GitHubRepoName}'
       ServiceRole: !Ref CodeBuildRoleArn
       Artifacts:
         Type: S3
         Location: !Sub '${ArtifactBucket}'
         Name: !Sub ${AWS::StackName}repo.zip
         Packaging: ZIP
+        OverrideArtifactName: true
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
@@ -59,10 +60,12 @@ Resources:
           phases:
             install:
               commands:
-                # - "yum install util-linux" These packages already exist in CodeBuild container
                 - "curl -sL https://github.com/bronze1man/yaml2json/releases/download/v1.3/yaml2json_linux_amd64 > yaml2json"
                 - "chmod +x yaml2json"
                 - "(echo 'CodeBuildTriggerMetadata:' && env |grep CODEBUILD|sed 's/^/    /g;s/=/: \"/; s/$/\"/g') >> .pipeline.yaml"
+                - "export ARTIFACT_NAME=${GitHubUser}-${GitHubRepoName}-$CODEBUILD_RESOLVED_SOURCE_VERSION.zip"
+                - "export ARTIFACT_LOCATION=$ARTIFACT_BUCKET/$ARTIFACT_NAME"
+                - "(echo 'SourceMetadata:' && env |grep ARTIFACT|sed 's/^/    /g;s/=/: \"/; s/$/\"/g') >> .pipeline.yaml"
                 # TODO: Change this to actual quickstart location. Use parameter to trigger whether this will overwrite an existing file
                 - "curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/iaccompliance/assets/.cfnguardspec.yaml > .cfnguardspec.yaml"
             build:
@@ -76,16 +79,58 @@ Resources:
           artifacts:
             files:
               - '**/*'
-  CFNProject:
+            name: ${GitHubUser}-${GitHubRepoName}-$CODEBUILD_RESOLVED_SOURCE_VERSION.zip
+  CDKSynthProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Description: A CodeBuild Project that runs cfn-lint,cfn-guard or CDK Commands
+      Description: Project with Artifacts
       ServiceRole: !Ref CodeBuildRoleArn
       Artifacts:
         Type: S3
         Location: !Sub '${ArtifactBucket}'
         Name: !Sub ${AWS::StackName}repo.zip
         Packaging: ZIP
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+      Source:
+        Type: S3
+        Location: !Sub '${ArtifactBucket}/${AWS::StackName}repo.zip'
+        BuildSpec: | 
+          version: 0.2
+
+          phases:
+            install:
+              commands:
+                - npm install -g aws-cdk
+            build:
+              commands:
+                - cd ${CODEBUILD_SRC_DIR}
+                - 'echo "version: 0.2\nphases:\n  install:\n    commands:\n      - npm install -g aws-cdk\n      - cdk --version\n  build:\n    commands:      - cd ${CODEBUILD_SRC_DIR}\n      - tar xzvf app.tgz\n      - cdk ls\n      - cdk deploy" > .deployspec.yaml'
+                - npm install
+                - cdk synth -o ${CODEBUILD_SRC_DIR}/templates
+                - tar -czf /tmp/app.tgz .
+          artifacts:
+            files:
+            secondary-artifacts:
+              BuildArtifact:
+                files:
+                  - 'deployspec.yaml'
+              application:
+                files:
+                  - 'app.tgz'
+                discard-paths: yes
+                base-directory: '/tmp'
+                name: ${GitHubUser}-${GitHubRepoName}-$CODEBUILD_RESOLVED_SOURCE_VERSION-synth.zip
+      TimeoutInMinutes: 10
+  CFNProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: CodeBuild project for jobs without artifacts
+      ServiceRole: !Ref CodeBuildRoleArn
+      Artifacts:
+        Type: NO_ARTIFACTS
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
@@ -136,8 +181,16 @@ Resources:
           - |-
             {
               "Comment": "Use CodeBuild to run tests, get test results and send a notification on failure.",
-              "StartAt": "CDK Project?",
+              "StartAt": "Set Source Location",
               "States": {
+                "Set Source Location": {
+                  "Type": "Pass",
+                  "Parameters": {
+                    "location.$": "$.SourceMetadata.ARTIFACT_LOCATION"
+                  },
+                  "ResultPath": "$.source",
+                  "Next": "CDK Project?"
+                },
                 "CDK Project?": {
                   "Type": "Choice",
                   "Choices": [
@@ -153,9 +206,22 @@ Resources:
                   "Type": "Task",
                   "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
                   "Parameters": {
-                    "ProjectName": "${cfnProject}",
-                    "BuildspecOverride": "specfiles/cdksynthspec.yaml"
+                    "ProjectName": "${synthProject}",
+                    "SourceLocationOverride.$": "$.source.location",
+                    "ArtifactsOverride": {
+                      "Type": "S3",
+                      "Location": "${ArtifactBucket}",
+                      "Name": "States.Format('{}-synth', $.source.location)"
+                    }
                   },
+                  "Next": "Change Source Location"
+                },
+                "Change Source Location": {
+                  "Type": "Pass",
+                  "Parameters": {
+                    "location.$": "States.Format('{}-synth', $.source.location)"
+                  },
+                  "ResultPath": "$.source",
                   "Next": "Stage 1"
                 },
                 "Stage 1": {
@@ -168,7 +234,8 @@ Resources:
                           "Type": "Task",
                           "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
                           "Parameters": {
-                            "ProjectName": "${cfnProject}"
+                            "ProjectName": "${cfnProject}",
+                            "SourceLocationOverride.$": "$.source.location"
                           },
                           "ResultPath": "$.iacLintResult",
                           "End": true
@@ -183,7 +250,8 @@ Resources:
                           "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
                           "Parameters": {
                             "ProjectName": "${cfnProject}",
-                            "BuildspecOverride": ".cfnguardspec.yaml"
+                            "BuildspecOverride": ".cfnguardspec.yaml",
+                            "SourceLocationOverride.$": "$.source.location"
                           },
                           "ResultPath": "$.complianceCheckResult",
                           "End": true
@@ -200,6 +268,7 @@ Resources:
                       "Next": "Notify Failure"
                     }
                   ],
+                  "ResultPath": "$.stage1",
                   "Next": "Notify Success"
                 },
                 "Notify Success": {
@@ -210,6 +279,7 @@ Resources:
                     "Message.$": "$",
                     "TopicArn": "${snsSuccessTopicArn}"
                   },
+                  "ResultPath": "$.notification",
                   "End": true
                 },
                 "Notify Failure": {
@@ -220,11 +290,13 @@ Resources:
                     "Message.$": "$.errorInfo.Cause",
                     "TopicArn": "${snsFailureTopicArn}"
                   },
+                  "ResultPath": "$.notification",
                   "Next": "FailureState"
                 },
                 "FailureState": {
+                  "Cause.$": "$.errorInfo.Cause",
                   "Type": "Fail"
                 }
               }
             }
-          - {snsSuccessTopicArn: !Ref SNSSuccessTopic, snsFailureTopicArn: !Ref SNSFailureTopic, cfnProject: !Ref CFNProject }
+          - {snsSuccessTopicArn: !Ref SNSSuccessTopic, snsFailureTopicArn: !Ref SNSFailureTopic, cfnProject: !Ref CFNProject, synthProject: !Ref CDKSynthProject}
