@@ -8,7 +8,6 @@ phases:
     commands:
       - echo "Pull GA release from github"
       - echo "More info https://github.com/aws-cloudformation/cloudformation-guard/releases"
-      - wget -q https://github.com/aws-cloudformation/cloudformation-guard/releases/download/1.0.0/cfn-guard-linux-1.0.0.tar.gz
       # TODO: Allow guard ruleset to be specified in the repo
       - "curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/iaccompliance/assets/cfn_guard_ruleset > cfn_guard_ruleset"
       - "curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/iaccompliance/assets/cfn-guard-directory > cfn-guard-directory"
@@ -16,6 +15,7 @@ phases:
       - echo "Extract cfn-guard"
       - mkdir -p infra
       - cd infra
+      - wget -q https://github.com/aws-cloudformation/cloudformation-guard/releases/download/1.0.0/cfn-guard-linux-1.0.0.tar.gz
       - tar xf cfn-guard-linux-1.0.0.tar.gz .
       - cd ..
   build:

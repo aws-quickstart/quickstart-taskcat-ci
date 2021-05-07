@@ -5,15 +5,14 @@ shopt -s nullglob extglob
 mkdir -p "$templateloc"
 cd "$templateloc" || exit 1
 if [ -n "$(echo ./*.@(json|yml|yaml))" ]; then
-  echo "processing: *.@(json|yml|yaml)"
   for file in ./*.@(json|yml|yaml); do
-    echo "$file"
+    echo "Processing $file"
     # TODO: Work out a better way
     # TODO: Work out what to do with cdk stuff
-    [ "$file" = "cdk.json" ] || \
-      [ "$file" = "package-lock.json" ] || \
-      [ "$file" = "package.json" ] || \
-      [ "$file" = "tsconfig.json" ] || \
+    [ "$file" = "./cdk.json" ] || \
+      [ "$file" = "./package-lock.json" ] || \
+      [ "$file" = "./package.json" ] || \
+      [ "$file" = "./tsconfig.json" ] || \
       cfn-guard-linux/cfn-guard check --rule_set "$CF_ORG_RULESET" --template "$file" --strict-checks
     rc=$?
     [ $rc -gt 0 ] && exit $rc
