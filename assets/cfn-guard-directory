@@ -1,0 +1,16 @@
+#!/bin/bash
+
+templateloc=$1
+shopt -s nullglob extglob
+mkdir -p "$templateloc"
+cd "$templateloc" || exit 1
+if [ -n "$(echo ./*.@(json|yml|yaml))" ]; then
+  echo "processing: *.@(json|yml|yaml)"
+  for file in ./*.@(json|yml|yaml); do
+    echo "$file"
+    cfn-guard-linux/cfn-guard check --rule_set "$CF_ORG_RULESET" --template "$file" --strict-checks
+  done
+  echo "done"
+else
+  echo "no files to lint"
+fi
