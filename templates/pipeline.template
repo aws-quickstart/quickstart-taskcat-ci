@@ -294,7 +294,6 @@ Resources:
                   "Next": "FailureState"
                 },
                 "FailureState": {
-                  "Cause.$": "$.errorInfo.Cause",
                   "Type": "Fail"
                 }
               }
