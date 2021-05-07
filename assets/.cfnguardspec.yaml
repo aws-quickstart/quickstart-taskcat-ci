@@ -14,8 +14,10 @@ phases:
       - "curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/iaccompliance/assets/cfn-guard-directory > cfn-guard-directory"
       - chmod 755 cfn-guard-directory
       - echo "Extract cfn-guard"
-      - tar xf cfn-guard-linux-1.0.0.tar.gz .
       - mkdir -p infra
+      - cd infra
+      - tar xf cfn-guard-linux-1.0.0.tar.gz .
+      - cd ..
   build:
     commands:
       - ./cfn-guard-directory infra
