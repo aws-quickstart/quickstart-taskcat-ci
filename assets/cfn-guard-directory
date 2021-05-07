@@ -3,7 +3,7 @@
 templateloc=$1
 shopt -s nullglob extglob
 mkdir -p "$templateloc"
-cd "$templateloc" || exit 1
+pushd "$templateloc" || exit 1
 if [ -n "$(echo ./*.@(json|yml|yaml))" ]; then
   for file in ./*.@(json|yml|yaml); do
     echo "Processing $file"
@@ -21,3 +21,4 @@ if [ -n "$(echo ./*.@(json|yml|yaml))" ]; then
 else
   echo "no files to lint"
 fi
+popd || exit 1
