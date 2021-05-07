@@ -107,22 +107,16 @@ Resources:
             build:
               commands:
                 - cd ${CODEBUILD_SRC_DIR}
-                - 'echo "version: 0.2\nphases:\n  install:\n    commands:\n      - npm install -g aws-cdk\n      - cdk --version\n  build:\n    commands:      - cd ${CODEBUILD_SRC_DIR}\n      - tar xzvf app.tgz\n      - cdk ls\n      - cdk deploy" > .deployspec.yaml'
+                - mkdir -p ${CODEBUILD_SRC_DIR}/templates
+                - curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/iaccompliance/assets/.deployspec.yaml > .deployspec.yaml
+                - cd ./$CDK_PROJECT_DIR
                 - npm install
                 - cdk synth -o ${CODEBUILD_SRC_DIR}/templates
-                - tar -czf /tmp/app.tgz .
+                - cd $CODEBUILD_SRC_DIR
           artifacts:
+            enable-symlinks: yes
             files:
-            secondary-artifacts:
-              BuildArtifact:
-                files:
-                  - 'deployspec.yaml'
-              application:
-                files:
-                  - 'app.tgz'
-                discard-paths: yes
-                base-directory: '/tmp'
-                name: ${GitHubUser}-${GitHubRepoName}-$CODEBUILD_RESOLVED_SOURCE_VERSION-synth.zip
+              - '**/*'
       TimeoutInMinutes: 10
   CFNProject:
     Type: AWS::CodeBuild::Project
@@ -155,6 +149,7 @@ Resources:
               commands:
                 - echo Linting templates in $templateloc if they exist
                 - ./cfn-lint-directory $templateloc
+                - ./cfn-lint-directory templates # For CDK projects
       TimeoutInMinutes: 10
   StatesLogGroup: 
     Type: AWS::Logs::LogGroup
@@ -186,7 +181,8 @@ Resources:
                 "Set Source Location": {
                   "Type": "Pass",
                   "Parameters": {
-                    "location.$": "$.SourceMetadata.ARTIFACT_LOCATION"
+                    "location.$": "$.SourceMetadata.ARTIFACT_LOCATION",
+                    "name.$": "$.SourceMetadata.ARTIFACT_NAME"
                   },
                   "ResultPath": "$.source",
                   "Next": "CDK Project?"
@@ -211,15 +207,35 @@ Resources:
                     "ArtifactsOverride": {
                       "Type": "S3",
                       "Location": "${ArtifactBucket}",
-                      "Name": "States.Format('{}-synth', $.source.location)"
-                    }
+                      "Name.$": "States.Format('{}-synth.zip', $.source.name)",
+                      "Packaging": "ZIP"
+                    },
+                    "EnvironmentVariablesOverride": [
+                      {
+                        "Name": "CDK_PROJECT_DIR",
+                        "Type": "PLAINTEXT",
+                        "Value.$": "$.Pipeline.cdkprojectpath"
+                      }
+                    ]
                   },
+                  "Catch": [
+                    {
+                      "ErrorEquals": [
+                        "States.TaskFailed"
+                      ],
+                      "ResultPath": "$.errorInfo",
+                      "Next": "Notify Failure"
+                    }
+                  ],
+                  "ResultPath": "$.cdksynthResult",
                   "Next": "Change Source Location"
                 },
                 "Change Source Location": {
                   "Type": "Pass",
                   "Parameters": {
-                    "location.$": "States.Format('{}-synth', $.source.location)"
+                    "location.$": "States.Format('{}-synth.zip', $.source.location)",
+                    "name.$": "States.Format('{}-synth.zip', $.source.name)"
+
                   },
                   "ResultPath": "$.source",
                   "Next": "Stage 1"

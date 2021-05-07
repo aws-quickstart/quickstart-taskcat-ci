@@ -21,3 +21,4 @@ phases:
   build:
     commands:
       - ./cfn-guard-directory infra
+      - ./cfn-guard-directory templates # for CDK projects
