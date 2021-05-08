@@ -14,10 +14,8 @@ phases:
       - chmod 755 cfn-guard-directory
       - echo "Extract cfn-guard"
       - mkdir -p infra
-      - cd infra
       - wget -q https://github.com/aws-cloudformation/cloudformation-guard/releases/download/1.0.0/cfn-guard-linux-1.0.0.tar.gz
       - tar xf cfn-guard-linux-1.0.0.tar.gz .
-      - cd ..
   build:
     commands:
       - ./cfn-guard-directory infra
