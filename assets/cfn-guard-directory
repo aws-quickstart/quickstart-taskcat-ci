@@ -13,7 +13,7 @@ if [ -n "$(echo ./*.@(json|yml|yaml))" ]; then
       [ "$file" = "./package-lock.json" ] || \
       [ "$file" = "./package.json" ] || \
       [ "$file" = "./tsconfig.json" ] || \
-      cfn-guard-linux/cfn-guard check --rule_set "$CF_ORG_RULESET" --template "$file" --strict-checks
+      "${templateloc}/cfn-guard-linux/cfn-guard" check --rule_set "$CF_ORG_RULESET" --template "$file" --strict-checks
     rc=$?
     [ $rc -gt 0 ] && exit $rc
   done
