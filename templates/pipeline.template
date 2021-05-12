@@ -10,6 +10,7 @@ Parameters:
   SourceRepoBranch:
     Description: Enter the branch name to be monitored
     Type: String
+    Default: main
   ArtifactBucket:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
@@ -17,115 +18,24 @@ Parameters:
       letters, and hyphens (-). It cannot start or end with a hyphen (-).
     Description: S3 bucket name used to store build artifacts.
     Type: String
-#  GitMergeLambda:
-#    Description: Name of the GitMerge Lambda function
-#    Type: String
-#  CodeStarConnectionArn:
-#    Description: CodeStar Connection ARN
-#    Type: String
-#  CodePipelineRoleArn:
-#    Description: Code Pipeline service role ARN
-#    Type: String
   CodeBuildRoleArn:
     Description: Code Build service role ARN
     Type: String
-  StepFunctionsArn:
+  StepFunctionsRoleArn:
     Description: Step Functions service role ARN
     Type: String
 Resources:
-#  CodeBuild:
-#    Type: 'AWS::CodeBuild::Project'
-#    Properties:
-#      Description: !Sub 'Submit build jobs for ${GitHubRepoName} as part of CI/CD pipeline'
-#      ServiceRole: !Ref CodeBuildRoleArn
-#      Artifacts:
-#        Type: CODEPIPELINE
-#      Environment:
-#        Type: LINUX_CONTAINER
-#        ComputeType: BUILD_GENERAL1_SMALL
-#        Image: 'aws/codebuild/python:3.6.5'
-#        EnvironmentVariables:
-#          - Name: PROJECTNAME
-#            Value: !Sub '${GitHubRepoName}'
-#          - Name: GITHUBUSER
-#            Value: !Sub '${GitHubUser}'
-#          - Name: GITHUBTOKEN
-#            Value: !Sub '${GitHubOAuthToken}'
-#          - Name: SOURCEBRANCH
-#            Value: !Sub '${SourceRepoBranch}'
-#          - Name: ARTIFACT_BUCKET
-#            Value: !Ref ArtifactBucket
-#      Source:
-#        Type: CODEPIPELINE
-#        BuildSpec: |
-#          version: 0.2
-#
-#          phases:
-#            install:
-#              commands:
-#                - echo Entered the install phase...
-#                - apt-get update -y
-#                - sudo apt-get install zip gzip tar -y
-#                - pip3 install --upgrade pip
-#                - ln -s /usr/local/bin/pip /usr/bin/pip
-#            pre_build:
-#              commands:
-#                - echo Entered the pre_build phase...
-#                - echo Current directory is $CODEBUILD_SRC_DIR
-#                - ls -la
-#                - "export dirname=${!PWD##*/}"
-#                - echo Directory name $dirname
-#                - cd ..
-#                - mv $dirname $PROJECTNAME
-#                - ls -la
-#                - cd $PROJECTNAME
-#                - git config --global url."https://github.com/".insteadOf "git@github.com:"
-#                - git init
-#                - git remote add origin https://$GITHUBTOKEN@github.com/$GITHUBUSER/$PROJECTNAME.git
-#                - git fetch
-#                - git checkout -ft origin/$SOURCEBRANCH
-#                - git submodule init
-#                - git submodule update --recursive
-#                - ls -lR
-#                - cd ..
-#                - echo Upgrading AWS CLI using pip3...
-#                - pip install --upgrade awscli
-#                - echo Installing Taskcat using pip3...
-#                - pip install taskcat==0.9.23
-#                - echo Verifying Taskcat installation...
-#                - taskcat
-#                - echo Configuring aws cli...
-#                - aws configure set default.region us-west-2
-#            build:
-#              commands:
-#                - echo Entered the build phase...
-#                - cd $PROJECTNAME
-#                - taskcat test run -l
-#                - |
-#                  if $(grep -Fq "CREATE_FAILED" taskcat_outputs/index.html)
-#                  then
-#                    echo Quickstart FAILED!
-#                    exit 1
-#                  else
-#                    echo Quickstart Passed!
-#                    exit 0
-#                  fi
-#              finally:
-#                - ls -1 taskcat_outputs
-#                - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/$LOG; done
-#                - echo Zipping and uploading report to $ARTIFACT_BUCKET S3 bucket
-#                - zip -r taskcat_report.zip taskcat_outputs
-#                - aws s3 cp taskcat_report.zip s3://$ARTIFACT_BUCKET/taskcat_reports/$CODEBUILD_BUILD_ID.zip
   CodeBuild:
     Type: 'AWS::CodeBuild::Project'
     Properties:
-      Description: !Sub 'Submit build jobs for ${GitHubRepoName} as part of CI/CD pipeline'
+      Description: !Sub 'Trigger StepFunctions CI/CD for ${GitHubRepoName}'
       ServiceRole: !Ref CodeBuildRoleArn
       Artifacts:
         Type: S3
         Location: !Sub '${ArtifactBucket}'
-        Name: cfnrepo.zip
+        Name: !Sub ${AWS::StackName}repo.zip
         Packaging: ZIP
+        OverrideArtifactName: true
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
@@ -133,6 +43,12 @@ Resources:
         EnvironmentVariables:
           - Name: ARTIFACT_BUCKET
             Value: !Ref ArtifactBucket
+      Triggers:
+        BuildType: BUILD
+        Webhook: true
+        FilterGroups:
+          - - Type: EVENT
+              Pattern: PUSH
       SourceVersion: !Ref SourceRepoBranch
       Source:
         Auth: 
@@ -144,28 +60,35 @@ Resources:
           phases:
             install:
               commands:
-                - yum install jq
+                - "curl -sL https://github.com/bronze1man/yaml2json/releases/download/v1.3/yaml2json_linux_amd64 > yaml2json"
+                - "chmod +x yaml2json"
+                - "(echo 'CodeBuildTriggerMetadata:' && env |grep CODEBUILD|sed 's/^/    /g;s/=/: \"/; s/$/\"/g') >> .pipeline.yaml"
+                - "export ARTIFACT_NAME=${GitHubUser}-${GitHubRepoName}-$CODEBUILD_RESOLVED_SOURCE_VERSION.zip"
+                - "export ARTIFACT_LOCATION=$ARTIFACT_BUCKET/$ARTIFACT_NAME"
+                - "(echo 'SourceMetadata:' && env |grep ARTIFACT|sed 's/^/    /g;s/=/: \"/; s/$/\"/g') >> .pipeline.yaml"
+                # TODO: Change this to actual quickstart location. Use parameter to trigger whether this will overwrite an existing file
+                - "curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/iaccompliance/assets/.cfnguardspec.yaml > .cfnguardspec.yaml"
             build:
               commands:
-                - echo Entered the build phase...
-                - START_TIME=$(date +%s)
-                - HEX_TIME=$(printf '%x\n' $START_TIME)
-                - GUID=$(dd if=/dev/random bs=12 count=1 2>/dev/null | od -An -tx1 | tr -d ' \t\n')
-                - TRACE_ID="1-$HEX_TIME-$GUID"
-                - CDKProject=$( jq -r '.cfnpipeline | tostring' cfnpipeline.json )
-                - aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input $CDKProject --trace-header $TRACE_ID
+                - "echo Entered the build phase..."
+                - "START_TIME=$(date +%s)"
+                - "HEX_TIME=$(printf '%x\\n' $START_TIME)"
+                - "GUID=$(uuidgen -r |tr -d -)"
+                - 'TRACE_ID="1-$HEX_TIME-$GUID"'
+                - 'aws stepfunctions start-execution --state-machine-arn ${CodeBuildStateMachine} --input "$(./yaml2json <.pipeline.yaml)" --trace-header $TRACE_ID'
           artifacts:
             files:
               - '**/*'
-  CFNProject:
+            name: ${GitHubUser}-${GitHubRepoName}-$CODEBUILD_RESOLVED_SOURCE_VERSION.zip
+  CDKSynthProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Description: A CodeBuild Project that runs cfn-lint,cfn-guard or CDK Commands
+      Description: Project with Artifacts
       ServiceRole: !Ref CodeBuildRoleArn
       Artifacts:
         Type: S3
         Location: !Sub '${ArtifactBucket}'
-        Name: cfnrepo.zip
+        Name: !Sub ${AWS::StackName}repo.zip
         Packaging: ZIP
       Environment:
         Type: LINUX_CONTAINER
@@ -173,19 +96,73 @@ Resources:
         Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
       Source:
         Type: S3
-        Location: !Sub '${ArtifactBucket}/cfnrepo.zip'
-        BuildSpec: cfnlintspec.yml
+        Location: !Sub '${ArtifactBucket}/${AWS::StackName}repo.zip'
+        BuildSpec: | 
+          version: 0.2
+
+          phases:
+            install:
+              commands:
+                - npm install -g aws-cdk
+            build:
+              commands:
+                - cd ${CODEBUILD_SRC_DIR}
+                - mkdir -p ${CODEBUILD_SRC_DIR}/templates
+                - curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/iaccompliance/assets/.deployspec.yaml > .deployspec.yaml
+                - cd ./$CDK_PROJECT_DIR
+                - npm install
+                - cdk synth -o ${CODEBUILD_SRC_DIR}/templates
+                - cd $CODEBUILD_SRC_DIR
+          artifacts:
+            enable-symlinks: yes
+            files:
+              - '**/*'
+      TimeoutInMinutes: 10
+  CFNProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: CodeBuild project for jobs without artifacts
+      ServiceRole: !Ref CodeBuildRoleArn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+      Source:
+        Type: S3
+        Location: !Sub '${ArtifactBucket}/${AWS::StackName}repo.zip'
+        BuildSpec: | 
+          version: 0.2
+
+          env:
+            variables:
+              templateloc: "./infra"
+          phases:
+            install:
+              commands:
+                - echo Installing cfn-lint using pip3...
+                - pip3 install cfn-lint
+                - curl -sL https://github.com/elerch/quickstart-taskcat-ci/raw/main/assets/cfn-lint-directory > ./cfn-lint-directory
+                - chmod 755 ./cfn-lint-directory
+            build:
+              commands:
+                - echo Linting templates in $templateloc if they exist
+                - ./cfn-lint-directory $templateloc
+                - ./cfn-lint-directory templates # For CDK projects
       TimeoutInMinutes: 10
   StatesLogGroup: 
     Type: AWS::Logs::LogGroup
     Properties: 
       RetentionInDays: 7
-  SNSTopic:
+  SNSFailureTopic:
+    Type: AWS::SNS::Topic
+  SNSSuccessTopic:
     Type: AWS::SNS::Topic
   CodeBuildStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
-      RoleArn: !Ref StepFunctionsArn
+      RoleArn: !Ref StepFunctionsRoleArn
       TracingConfiguration:
         Enabled: true
       LoggingConfiguration:
@@ -198,84 +175,143 @@ Resources:
         !Sub
           - |-
             {
-              "Comment": "An example of using CodeBuild to run tests, get test results and send a notification.",
-              "StartAt": "CDK Project?",
+              "Comment": "Use CodeBuild to run tests, get test results and send a notification on failure.",
+              "StartAt": "Set Source Location",
               "States": {
+                "Set Source Location": {
+                  "Type": "Pass",
+                  "Parameters": {
+                    "location.$": "$.SourceMetadata.ARTIFACT_LOCATION",
+                    "name.$": "$.SourceMetadata.ARTIFACT_NAME"
+                  },
+                  "ResultPath": "$.source",
+                  "Next": "CDK Project?"
+                },
                 "CDK Project?": {
                   "Type": "Choice",
                   "Choices": [
                     {
-                      "Variable": "$.cdkproject",
-                      "StringEquals": "true",
+                      "Variable": "$.Pipeline.cdkprojectpath",
+                      "IsPresent": true,
                       "Next": "CDK Synth"
                     }
                   ],
-                  "Default": "Run Linting"
+                  "Default": "Stage 1"
                 },
                 "CDK Synth": {
                   "Type": "Task",
                   "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
                   "Parameters": {
-                    "ProjectName": "${cfnProject}",
-                    "BuildspecOverride": "specfiles/cdksynthspec.yml"
+                    "ProjectName": "${synthProject}",
+                    "SourceLocationOverride.$": "$.source.location",
+                    "ArtifactsOverride": {
+                      "Type": "S3",
+                      "Location": "${ArtifactBucket}",
+                      "Name.$": "States.Format('{}-synth.zip', $.source.name)",
+                      "Packaging": "ZIP"
+                    },
+                    "EnvironmentVariablesOverride": [
+                      {
+                        "Name": "CDK_PROJECT_DIR",
+                        "Type": "PLAINTEXT",
+                        "Value.$": "$.Pipeline.cdkprojectpath"
+                      }
+                    ]
                   },
-                  "Next": "Run Linting"
-                },
-                "Run Linting": {
-                  "Type": "Task",
-                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
-                  "Parameters": {
-                    "ProjectName": "${cfnProject}"
-                  },
-                  "Next": "Lint Tests Passed?"
-                },
-                "Lint Tests Passed?": {
-                  "Type": "Choice",
-                  "Choices": [
+                  "Catch": [
                     {
-                      "Variable": "$.Build.BuildStatus",
-                      "StringEquals": "SUCCEEDED",
-                      "Next": "Run Compliance Check"
+                      "ErrorEquals": [
+                        "States.TaskFailed"
+                      ],
+                      "ResultPath": "$.errorInfo",
+                      "Next": "Notify Failure"
                     }
                   ],
-                  "Default": "Notify Failure"
+                  "ResultPath": "$.cdksynthResult",
+                  "Next": "Change Source Location"
                 },
-                "Run Compliance Check": {
-                  "Type": "Task",
-                  "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                "Change Source Location": {
+                  "Type": "Pass",
                   "Parameters": {
-                    "ProjectName": "${cfnProject}",
-                    "BuildspecOverride": "cfnguardspec.yml"
+                    "location.$": "States.Format('{}-synth.zip', $.source.location)",
+                    "name.$": "States.Format('{}-synth.zip', $.source.name)"
+
                   },
-                  "Next": "Guard Tests Passed?"
+                  "ResultPath": "$.source",
+                  "Next": "Stage 1"
                 },
-                "Guard Tests Passed?": {
-                  "Type": "Choice",
-                  "Choices": [
+                "Stage 1": {
+                  "Type": "Parallel",
+                  "Branches": [
                     {
-                      "Variable": "$.Build.BuildStatus",
-                      "StringEquals": "SUCCEEDED",
-                      "Next": "SuccessState"
+                      "StartAt": "Run IaC Linting",
+                      "States": {
+                        "Run IaC Linting": {
+                          "Type": "Task",
+                          "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                          "Parameters": {
+                            "ProjectName": "${cfnProject}",
+                            "SourceLocationOverride.$": "$.source.location"
+                          },
+                          "ResultPath": "$.iacLintResult",
+                          "End": true
+                        }
+                      }
+                    },
+                    {
+                      "StartAt": "Run Compliance Check",
+                      "States": {
+                        "Run Compliance Check": {
+                          "Type": "Task",
+                          "Resource": "arn:${AWS::Partition}:states:::codebuild:startBuild.sync",
+                          "Parameters": {
+                            "ProjectName": "${cfnProject}",
+                            "BuildspecOverride": ".cfnguardspec.yaml",
+                            "SourceLocationOverride.$": "$.source.location"
+                          },
+                          "ResultPath": "$.complianceCheckResult",
+                          "End": true
+                        }
+                      }
                     }
                   ],
-                  "Default": "Notify Failure"
+                  "Catch": [
+                    {
+                      "ErrorEquals": [
+                        "States.TaskFailed"
+                      ],
+                      "ResultPath": "$.errorInfo",
+                      "Next": "Notify Failure"
+                    }
+                  ],
+                  "ResultPath": "$.stage1",
+                  "Next": "Notify Success"
                 },
-                "SuccessState": {
-                  "Type": "Succeed"
+                "Notify Success": {
+                  "Type": "Task",
+                  "Resource": "arn:${AWS::Partition}:states:::sns:publish",
+                  "Parameters": {
+                    "Subject": "Pipeline completed successfully",
+                    "Message.$": "$",
+                    "TopicArn": "${snsSuccessTopicArn}"
+                  },
+                  "ResultPath": "$.notification",
+                  "End": true
                 },
                 "Notify Failure": {
                   "Type": "Task",
                   "Resource": "arn:${AWS::Partition}:states:::sns:publish",
                   "Parameters": {
-                    "Message": "CodeBuild build tests failed",
-                    "TopicArn": "${snsTopicArn}"
+                    "Subject": "Pipeline stage failed",
+                    "Message.$": "$.errorInfo.Cause",
+                    "TopicArn": "${snsFailureTopicArn}"
                   },
-                  "End": true
+                  "ResultPath": "$.notification",
+                  "Next": "FailureState"
+                },
+                "FailureState": {
+                  "Type": "Fail"
                 }
               }
             }
-          - {snsTopicArn: !Ref SNSTopic, cfnProject: !Ref CFNProject }
-#Outputs:
-#  CodePipelineName:
-#    Description: Pipeline  name
-#    Value: !Ref CodePipeline
+          - {snsSuccessTopicArn: !Ref SNSSuccessTopic, snsFailureTopicArn: !Ref SNSFailureTopic, cfnProject: !Ref CFNProject, synthProject: !Ref CDKSynthProject}

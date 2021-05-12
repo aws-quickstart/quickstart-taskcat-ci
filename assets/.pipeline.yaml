@@ -1,0 +1,2 @@
+Pipeline:
+    cdkprojectpath: /mypath # if using CDK, path relative to repository root for the CDK

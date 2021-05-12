@@ -1,0 +1,24 @@
+#!/bin/bash
+
+templateloc=$1
+shopt -s nullglob extglob
+mkdir -p "$templateloc"
+pushd "$templateloc" || exit 1
+if [ -n "$(echo ./*.@(json|yml|yaml))" ]; then
+  for file in ./*.@(json|yml|yaml); do
+    echo "Processing $file"
+    # TODO: Work out a better way
+    # TODO: Work out what to do with cdk stuff
+    [ "$file" = "./cdk.json" ] || \
+      [ "$file" = "./package-lock.json" ] || \
+      [ "$file" = "./package.json" ] || \
+      [ "$file" = "./tsconfig.json" ] || \
+      "${$CODEBUILD_SRC_DIR}/cfn-guard-linux/cfn-guard" check --rule_set "$CF_ORG_RULESET" --template "$file" --strict-checks
+    rc=$?
+    [ $rc -gt 0 ] && exit $rc
+  done
+  echo "done"
+else
+  echo "no files to lint"
+fi
+popd || exit 1
