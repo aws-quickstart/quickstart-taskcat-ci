@@ -189,6 +189,7 @@ Parameters:
       Enter the release branch name. On successfull build, above branch will be
       merged into this branch.
     Type: String
+    Default: main
   GitHubOAuthToken:
     Description: >-
       Create a token with 'repo' and 'admin:repo_hook' permissions here
