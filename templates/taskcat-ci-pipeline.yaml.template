@@ -2,8 +2,126 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   Creates Pipeline and required resources for TaskCat CI. License: Apache 2.0
   (Please do not remove)(qs-1ops82lkf)
-
 Resources:
+  CopyLambdasStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        !Sub
+          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/copy-lambdas.template'
+          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        BucketName: !Ref ArtifactBucket
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3BucketRegion: !Ref QSS3BucketRegion
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  SSMStack:
+    Type: 'AWS::CloudFormation::Stack'
+    DependsOn:
+      - CopyLambdasStack
+    Properties:
+      TemplateURL:
+        !Sub
+          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/ssm.template'
+          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        GitHubOAuthToken: !Ref GitHubOAuthToken
+        GitHubOAuthTokenId: !Join
+          - '_'
+          - - GithubToken
+            # Returns pseudo random string captured from cfn stack ARN
+            - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
+        LambdaZipsBucket: !GetAtt
+          - CopyLambdasStack
+          - Outputs.LambdaZipsBucket
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+  GitMergeLambda:
+    Type: 'AWS::Lambda::Function'
+    DependsOn:
+      - GitMergeRole
+      - CopyLambdasStack
+      - SSMStack
+    Properties:
+      Code:
+        S3Bucket: !GetAtt
+          - CopyLambdasStack
+          - Outputs.LambdaZipsBucket
+        S3Key: !Sub '${QSS3KeyPrefix}functions/package/lambda.zip'
+      Description: Merge github branches
+      FunctionName: !Join
+        - '_'
+        - - GitMerge
+          # Returns pseudo random string captured from cfn stack ARN
+          - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
+      Handler: !Join
+        - .
+        - - git_merge
+          - lambda_handler
+      Role: !GetAtt
+        - GitMergeRole
+        - Arn
+      Runtime: python3.6
+      Timeout: 30
+  GitMergeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: GitMergeRolePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - !Join
+                    - ''
+                    - - 'arn:aws:logs:'
+                      - !Ref 'AWS::Region'
+                      - ':'
+                      - !Ref 'AWS::AccountId'
+                      - ':log-group:/aws/lambda/*'
+              - Effect: Allow
+                Action:
+                  - 'codepipeline:GetPipeline'
+                  - 'codepipeline:GetPipelineExecution'
+                  - 'codepipeline:GetPipelineState'
+                  - 'codepipeline:ListPipelines'
+                  - 'codepipeline:ListPipelineExecutions'
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:codepipeline:${AWS::Region}:${AWS::AccountId}:*'
+              - Effect: Allow
+                Action:
+                  - 'codepipeline:GetJobDetails'
+                  - 'codepipeline:PutJobSuccessResult'
+                  - 'codepipeline:PutJobFailureResult'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                Resource: !Ref ArtifactBucket
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubOAuthToken}"
+              - Effect: Allow
+                Action:
+                  - 'kms:Decrypt'
+                Resource: !GetAtt
+                  - SSMStack
+                  - Outputs.KMSKeyArn
   ArtifactBucket:
     Type: 'AWS::S3::Bucket'
     Properties:
@@ -14,22 +132,16 @@ Resources:
             Status: Enabled
       VersioningConfiguration:
         Status: Enabled
-  EmptyBucketLambdaStack:
-    Type: 'AWS::CloudFormation::Stack'
-    DependsOn:
-      - ArtifactBucket
-    Properties:
-      TemplateURL: !Sub >-
-        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/empty-bucket.yaml.template
-      Parameters:
-        BucketName: !Ref ArtifactBucket
   IAMRoleStack:
     Type: 'AWS::CloudFormation::Stack'
     DependsOn:
       - ArtifactBucket
     Properties:
-      TemplateURL: !Sub >-
-        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/iam-roles.yaml.template
+      TemplateURL:
+        !Sub
+          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/iam-roles.template'
+          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
         ArtifactBucket: !Ref ArtifactBucket
   CodePipelineStack:
@@ -38,40 +150,52 @@ Resources:
       - ArtifactBucket
       - IAMRoleStack
     Properties:
-      TemplateURL: !Sub >-
-        https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/pipeline.yaml.template
+      TemplateURL:
+        !Sub
+          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/pipeline.template'
+          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        CodeCommitRepoName: !Ref CodeCommitRepoName
-        CodeCommitRepoUrl: !Ref CodeCommitRepoUrl
-        SourceBranch: !Ref SourceBranch
+        GitHubUser: !Ref GitHubUser
+        GitHubRepoName: !Ref GitHubRepoName
+        SourceRepoBranch: !Ref SourceRepoBranch
         ReleaseBranch: !Ref ReleaseBranch
+        GitHubOAuthToken: !Ref GitHubOAuthToken
+        GitHubOAuthTokenId: !Join
+          - '_'
+          - - GithubToken
+            # Returns pseudo random string captured from cfn stack ARN
+            - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
         ArtifactBucket: !Ref ArtifactBucket
-        CodePipelineRoleArn: !GetAtt 
+        GitMergeLambda: !Ref GitMergeLambda
+        CodePipelineRoleArn: !GetAtt
           - IAMRoleStack
           - Outputs.CodePipelineRoleArn
-        CodeBuildRoleArn: !GetAtt 
+        CodeBuildRoleArn: !GetAtt
           - IAMRoleStack
           - Outputs.CodeBuildRoleArn
-
 Parameters:
-  CodeCommitRepoName:
+  GitHubUser:
+    Description: Enter GitHub username of the repository owner
+    Type: String
+  GitHubRepoName:
     Description: Enter the repository name that should be monitored for changes
     Type: String
-  CodeCommitRepoUrl:
-    Description: >-
-      AWS Code commit repository URL which will be monitored for CI/CD. Provide
-      https:// endpoint of the repo.
-    Type: String
-  SourceBranch:
+  SourceRepoBranch:
     Description: Enter the branch name to be monitored
     Type: String
-    Default: develop
   ReleaseBranch:
     Description: >-
       Enter the release branch name. On successfull build, above branch will be
       merged into this branch.
     Type: String
     Default: main
+  GitHubOAuthToken:
+    Description: >-
+      Create a token with 'repo' and 'admin:repo_hook' permissions here
+      https://github.com/settings/tokens
+    Type: String
+    NoEcho: 'true'
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: >-
@@ -82,6 +206,10 @@ Parameters:
       S3 bucket name for the Quick Start assets. Quick Start bucket name can
       include numbers, lowercase letters, uppercase letters, and hyphens (-). It
       cannot start or end with a hyphen (-).
+    Type: String
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
     Type: String
   QSS3KeyPrefix:
     AllowedPattern: '^[0-9a-zA-Z-/]*$'
@@ -94,43 +222,51 @@ Parameters:
       include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
     Type: String
-
 Metadata:
   'AWS::CloudFormation::Interface':
     ParameterGroups:
       - Label:
-          default: AWS Code Commit Configuration
+          default: GitHub Configuration
         Parameters:
-          - CodeCommitRepoName
-          - CodeCommitRepoUrl
-          - SourceBranch
+          - GitHubUser
+          - GitHubRepoName
+          - SourceRepoBranch
           - ReleaseBranch
+          - GitHubOAuthToken
       - Label:
           default: AWS Quick Start Configuration
         Parameters:
           - QSS3BucketName
+          - QSS3BucketRegion
           - QSS3KeyPrefix
     ParameterLabels:
-      CodeCommitRepoUrl:
-        default: Repository URL
-      CodeCommitRepoName:
+      GitHubUser:
+        default: Repository owner
+      GitHubRepoName:
         default: Repository name
-      SourceBranch:
+      SourceRepoBranch:
         default: Source branch
       ReleaseBranch:
         default: Release branch
+      GitHubOAuthToken:
+        default: OAuth2 token
       QSS3BucketName:
         default: Quick Start S3 Bucket Name
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket region
       QSS3KeyPrefix:
         default: Quick Start S3 Key Prefix
+
+Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 
 Outputs:
   CodePipelineURL:
     Description: The URL of the created Pipeline
-    Value: !Sub 
+    Value: !Sub
       - >-
         https://${AWS::Region}.console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${CodePipelineName}
-      - CodePipelineName: !GetAtt 
+      - CodePipelineName: !GetAtt
           - CodePipelineStack
           - Outputs.CodePipelineName
   TaskCatReports:
