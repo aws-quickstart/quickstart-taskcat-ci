@@ -1,6 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: >-
-  This template empty the given S3 bucket
+Description: This template empty the given S3 bucket (qs-1s0oso9qc)
 
 Parameters:
   BucketName:
@@ -109,7 +108,7 @@ Resources:
       Role: !GetAtt 
         - S3CleanUpRole
         - Arn
-      Runtime: python2.7
+      Runtime: python3.8
       Timeout: 240
     DependsOn: S3CleanUpRole
     Type: 'AWS::Lambda::Function'
@@ -123,7 +122,7 @@ Resources:
               Service: lambda.amazonaws.com
         Version: 2012-10-17
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - !Sub 'arn:{AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
       Path: /
       Policies:
         - PolicyDocument:
@@ -139,8 +138,8 @@ Resources:
                   - 's3:GetBucketVersioning'
                 Effect: Allow
                 Resource:
-                  - !Sub 'arn:aws:s3:::${BucketName}/*'
-                  - !Sub 'arn:aws:s3:::*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${BucketName}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::*'
             Version: 2012-10-17
           PolicyName: Empty-bucket
     Type: 'AWS::IAM::Role'

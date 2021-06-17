@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Creates IAM roles for TaskCat CI.
+Description: Creates IAM roles for TaskCat CI. (qs-1s0p06afq)
 Resources:
   CodeBuildServiceRole:
     Type: 'AWS::IAM::Role'
@@ -14,9 +14,17 @@ Resources:
             Action: 'sts:AssumeRole'
       Path: /
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess'
   CodePipelineServiceRole:
     Type: 'AWS::IAM::Role'
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - EIAMPolicyWildcardResource
+          ignore_reasons:
+            EIAMPolicyWildcardResource: "Need to invoke codepipeline stages; create CFN stacks"
+
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -38,21 +46,14 @@ Resources:
                   - 's3:GetBucketVersioning'
                   - 's3:PutObject'
                 Resource:
-                  - !Sub 'arn:aws:s3:::${ArtifactBucket}'
-                  - !Sub 'arn:aws:s3:::${ArtifactBucket}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${ArtifactBucket}/*'
                 Effect: Allow
               - Action:
                   - 'cloudformation:CreateStack'
                   - 'cloudformation:DeleteStack'
                   - 'cloudformation:DescribeStacks'
-                  - 'cloudformation:UpdateStack'
-                  - 'cloudformation:CreateChangeSet'
-                  - 'cloudformation:DeleteChangeSet'
-                  - 'cloudformation:DescribeChangeSet'
-                  - 'cloudformation:ExecuteChangeSet'
-                  - 'cloudformation:SetStackPolicy'
                   - 'cloudformation:ValidateTemplate'
-                  - 'iam:PassRole'
                 Resource: '*'
                 Effect: Allow
               - Action:
@@ -61,22 +62,7 @@ Resources:
                 Resource: '*'
                 Effect: Allow
               - Action:
-                  - 'lambda:GetPolicy'
-                  - 'lambda:ListEventSourceMappings'
-                  - 'lambda:ListFunctions'
-                  - 'lambda:InvokeFunction'
-                  - 'lambda:GetEventSourceMapping'
-                  - 'lambda:GetFunction'
-                  - 'lambda:ListAliases'
-                  - 'lambda:GetAlias'
-                  - 'lambda:ListTags'
-                  - 'lambda:ListVersionsByFunction'
-                  - 'lambda:GetAccountSettings'
-                  - 'lambda:GetFunctionConfiguration'
-                Resource: '*'
-                Effect: Allow
-              - Action:
-                  - 'codecommit:*'
+                   - 'lambda:InvokeFunction'
                 Resource: '*'
                 Effect: Allow
 Parameters:
@@ -90,11 +76,11 @@ Parameters:
 Outputs:
   CodePipelineRoleArn:
     Description: Code Pipeline service role arn
-    Value: !GetAtt 
+    Value: !GetAtt
       - CodePipelineServiceRole
       - Arn
   CodeBuildRoleArn:
     Description: Code Build service role arn
-    Value: !GetAtt 
+    Value: !GetAtt
       - CodeBuildServiceRole
       - Arn

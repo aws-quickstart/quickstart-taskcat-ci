@@ -28,12 +28,12 @@ Resources:
             S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
         GitHubOAuthToken: !Ref GitHubOAuthToken
-        GitHubOAuthTokenId: !Join 
+        GitHubOAuthTokenId: !Join
           - '_'
           - - GithubToken
             # Returns pseudo random string captured from cfn stack ARN
             - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
-        LambdaZipsBucket: !GetAtt 
+        LambdaZipsBucket: !GetAtt
           - CopyLambdasStack
           - Outputs.LambdaZipsBucket
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
@@ -45,21 +45,21 @@ Resources:
       - SSMStack
     Properties:
       Code:
-        S3Bucket: !GetAtt 
+        S3Bucket: !GetAtt
           - CopyLambdasStack
           - Outputs.LambdaZipsBucket
         S3Key: !Sub '${QSS3KeyPrefix}functions/package/lambda.zip'
       Description: Merge github branches
-      FunctionName: !Join 
+      FunctionName: !Join
         - '_'
         - - GitMerge
           # Returns pseudo random string captured from cfn stack ARN
           - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
-      Handler: !Join 
+      Handler: !Join
         - .
         - - git_merge
           - lambda_handler
-      Role: !GetAtt 
+      Role: !GetAtt
         - GitMergeRole
         - Arn
       Runtime: python3.6
@@ -86,7 +86,7 @@ Resources:
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
                 Resource:
-                  - !Join 
+                  - !Join
                     - ''
                     - - 'arn:aws:logs:'
                       - !Ref 'AWS::Region'
@@ -101,7 +101,7 @@ Resources:
                   - 'codepipeline:ListPipelines'
                   - 'codepipeline:ListPipelineExecutions'
                 Resource:
-                  - !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:*'
+                  - !Sub 'arn:${AWS::Partition}:codepipeline:${AWS::Region}:${AWS::AccountId}:*'
               - Effect: Allow
                 Action:
                   - 'codepipeline:GetJobDetails'
@@ -111,17 +111,15 @@ Resources:
               - Effect: Allow
                 Action:
                   - 's3:GetObject'
-                Resource: '*'
+                Resource: !Ref ArtifactBucket
               - Effect: Allow
                 Action:
-                  - 'ssm:Describe*'
-                  - 'ssm:Get*'
-                  - 'ssm:List*'
-                Resource: '*'
+                  - ssm:GetParameter
+                Resource: !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubOAuthToken}"
               - Effect: Allow
                 Action:
                   - 'kms:Decrypt'
-                Resource: !GetAtt 
+                Resource: !GetAtt
                   - SSMStack
                   - Outputs.KMSKeyArn
   ArtifactBucket:
@@ -163,17 +161,17 @@ Resources:
         SourceRepoBranch: !Ref SourceRepoBranch
         ReleaseBranch: !Ref ReleaseBranch
         GitHubOAuthToken: !Ref GitHubOAuthToken
-        GitHubOAuthTokenId: !Join 
+        GitHubOAuthTokenId: !Join
           - '_'
           - - GithubToken
             # Returns pseudo random string captured from cfn stack ARN
             - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
         ArtifactBucket: !Ref ArtifactBucket
         GitMergeLambda: !Ref GitMergeLambda
-        CodePipelineRoleArn: !GetAtt 
+        CodePipelineRoleArn: !GetAtt
           - IAMRoleStack
           - Outputs.CodePipelineRoleArn
-        CodeBuildRoleArn: !GetAtt 
+        CodeBuildRoleArn: !GetAtt
           - IAMRoleStack
           - Outputs.CodeBuildRoleArn
 Parameters:
@@ -264,10 +262,10 @@ Conditions:
 Outputs:
   CodePipelineURL:
     Description: The URL of the created Pipeline
-    Value: !Sub 
+    Value: !Sub
       - >-
         https://${AWS::Region}.console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${CodePipelineName}
-      - CodePipelineName: !GetAtt 
+      - CodePipelineName: !GetAtt
           - CodePipelineStack
           - Outputs.CodePipelineName
   TaskCatReports:

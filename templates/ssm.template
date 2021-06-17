@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   This template creates KMS Key and use that key to create Secure string
-  parameter in AWS Systems Manager.
+  parameter in AWS Systems Manager. (qs-1s0ouua26)
 Parameters:
   GitHubOAuthToken:
     Description: GitHub OAuth Token
@@ -28,6 +28,17 @@ Parameters:
 Resources:
   KMSKey:
     Type: 'AWS::KMS::Key'
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - EIAMPolicyResourceWildcard
+            - EIAMPolicyActionWildcard
+            - EIAMPolicyWildcardResource
+          ignore_reasons:
+            EIAMPolicyResourceWildcard: This is the default KMS key policy."
+            EIAMPolicyActionWildcard: This is the default KMS key policy."
+            EIAMPolicyWildcardResource: Circular dependecy
     Properties:
       Description: >-
         Used to encrypt/decrypt secure string parameters in AWS Systems manager
@@ -35,62 +46,72 @@ Resources:
       KeyPolicy:
         Version: 2012-10-17
         Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
           - Sid: Allow access for Key Administrators
             Effect: Allow
             Principal:
-              AWS:
-                - !Join 
-                  - ''
-                  - - 'arn:aws:iam::'
-                    - !Ref 'AWS::AccountId'
-                    - ':root'
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/Admin
             Action:
-              - 'kms:Create*'
-              - 'kms:Describe*'
-              - 'kms:Enable*'
-              - 'kms:List*'
-              - 'kms:Put*'
-              - 'kms:Update*'
-              - 'kms:Revoke*'
-              - 'kms:Disable*'
-              - 'kms:Get*'
-              - 'kms:Delete*'
-              - 'kms:ScheduleKeyDeletion'
-              - 'kms:CancelKeyDeletion'
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:TagResource
+              - kms:UntagResource
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
             Resource: '*'
           - Sid: Allow use of the key
             Effect: Allow
             Principal:
-              AWS:
-                - !Join 
-                  - ''
-                  - - 'arn:aws:iam::'
-                    - !Ref 'AWS::AccountId'
-                    - ':root'
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/Admin
             Action:
-              - 'kms:Encrypt'
-              - 'kms:Decrypt'
-              - 'kms:ReEncrypt*'
-              - 'kms:GenerateDataKey*'
-              - 'kms:DescribeKey'
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
             Resource: '*'
           - Sid: Allow attachment of persistent resources
             Effect: Allow
             Principal:
-              AWS:
-                - !Join 
-                  - ''
-                  - - 'arn:aws:iam::'
-                    - !Ref 'AWS::AccountId'
-                    - ':root'
+              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/Admin
             Action:
-              - 'kms:CreateGrant'
-              - 'kms:ListGrants'
-              - 'kms:RevokeGrant'
+              - kms:CreateGrant
+              - kms:ListGrants
+              - kms:RevokeGrant
             Resource: '*'
             Condition:
               Bool:
-                'kms:GrantIsForAWSResource': true
+                kms:GrantIsForAWSResource: 'true'
+          - Sid: AllowUseOfTheKey
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: '*'
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com
+                kms:CallerAccount: !Ref AWS::AccountId
+
   CreateSecureStringParameterKeyRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -102,7 +123,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
       Path: /
       Policies:
         - PolicyName: ssm-createParam
@@ -114,29 +135,21 @@ Resources:
                   - 'kms:Encrypt'
                   - 'kms:Decrypt'
                 Resource:
-                  - !GetAtt 
+                  - !GetAtt
                     - KMSKey
                     - Arn
               - Effect: Allow
                 Action:
-                  - 'ssm:PutParameter'
-                  - 'ssm:DeleteParameter'
-                  - 'ssm:DeleteParameters'
+                  - ssm:PutParameter
+                  - ssm:DeleteParameter
                 Resource:
-                  - '*'
-              - Effect: Allow
-                Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                Resource:
-                  - 'arn:aws:logs:*:*:*'
+                  - !Sub 'arn:${AWS::Partition}:ssm:us-east-2:123456789012:parameter/${GitHubOAuthTokenId}'
   CreateSSMParamLambda:
     Type: 'AWS::Lambda::Function'
     Properties:
       Handler: ssm.lambda_handler
       MemorySize: 128
-      Role: !GetAtt 
+      Role: !GetAtt
         - CreateSecureStringParameterKeyRole
         - Arn
       Runtime: python3.6
@@ -148,7 +161,7 @@ Resources:
     Type: 'AWS::CloudFormation::CustomResource'
     Version: '1.0'
     Properties:
-      ServiceToken: !GetAtt 
+      ServiceToken: !GetAtt
         - CreateSSMParamLambda
         - Arn
       GITHUB_TOKEN_ID: !Ref GitHubOAuthTokenId
@@ -157,6 +170,6 @@ Resources:
 Outputs:
   KMSKeyArn:
     Description: KMS Key ARN
-    Value: !GetAtt 
+    Value: !GetAtt
       - KMSKey
       - Arn
