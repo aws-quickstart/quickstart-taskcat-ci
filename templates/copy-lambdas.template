@@ -135,7 +135,7 @@ Resources:
       Role: !GetAtt 
         - CopyObjectsRole
         - Arn
-      Runtime: python2.7
+      Runtime: python3.8
       Timeout: 240
     DependsOn:
       - CopyObjectsRole
@@ -286,7 +286,7 @@ Resources:
       Role: !GetAtt 
         - S3CleanUpRole
         - Arn
-      Runtime: python2.7
+      Runtime: python3.8
       Timeout: 240
     DependsOn: S3CleanUpRole
     Type: 'AWS::Lambda::Function'
