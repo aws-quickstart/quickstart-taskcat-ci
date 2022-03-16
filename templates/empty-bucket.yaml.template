@@ -6,12 +6,12 @@ Parameters:
   BucketName:
     Description: Name of the S3 Bucket which needs to be emptied
     Type: String
-    
+
 Resources:
   CleanUpS3Bucket:
     Properties:
       DestBucket: !Ref BucketName
-      ServiceToken: !GetAtt 
+      ServiceToken: !GetAtt
         - CleanUpS3BucketFunction
         - Arn
     DependsOn: CleanUpS3BucketFunction
@@ -19,7 +19,7 @@ Resources:
   CleanUpS3BucketFunction:
     Properties:
       Code:
-        ZipFile: !Join 
+        ZipFile: !Join
           - |+
 
           - - import json
@@ -106,10 +106,10 @@ Resources:
             - ''
       Description: Empty the S3 Bucket
       Handler: index.handler
-      Role: !GetAtt 
+      Role: !GetAtt
         - S3CleanUpRole
         - Arn
-      Runtime: python2.7
+      Runtime: python3.8
       Timeout: 240
     DependsOn: S3CleanUpRole
     Type: 'AWS::Lambda::Function'
