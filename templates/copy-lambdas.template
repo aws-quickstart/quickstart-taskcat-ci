@@ -43,7 +43,7 @@ Resources:
       - LambdaZipsBucket
       - CopyObjectsFunction
     Properties:
-      ServiceToken: !GetAtt 
+      ServiceToken: !GetAtt
         - CopyObjectsFunction
         - Arn
       DestBucket: !Ref LambdaZipsBucket
@@ -55,7 +55,7 @@ Resources:
   CopyObjectsFunction:
     Properties:
       Code:
-        ZipFile: !Join 
+        ZipFile: !Join
           - |+
 
           - - import json
@@ -132,10 +132,10 @@ Resources:
             - ''
       Description: Copies objects from a source S3 bucket to a destination S3 bucket
       Handler: index.handler
-      Role: !GetAtt 
+      Role: !GetAtt
         - CopyObjectsRole
         - Arn
-      Runtime: python2.7
+      Runtime: python3.8
       Timeout: 240
     DependsOn:
       - CopyObjectsRole
@@ -188,7 +188,7 @@ Resources:
   CleanUpS3Bucket:
     Properties:
       DestBucket: !Ref BucketName
-      ServiceToken: !GetAtt 
+      ServiceToken: !GetAtt
         - CleanUpS3BucketFunction
         - Arn
     DependsOn: CleanUpS3BucketFunction
@@ -196,7 +196,7 @@ Resources:
   CleanUpS3BucketFunction:
     Properties:
       Code:
-        ZipFile: !Join 
+        ZipFile: !Join
           - |+
 
           - - import json
@@ -264,13 +264,13 @@ Resources:
             - '        dest_bucket = event[''ResourceProperties''][''DestBucket'']'
             - '        if event[''RequestType''] == ''Delete'':'
             - '            CheckifVersioned = client.get_bucket_versioning(Bucket=dest_bucket)'
-            - '            print CheckifVersioned'
+            - '            print(CheckifVersioned)'
             - '            if ''Status'' in CheckifVersioned:'
-            - '                print CheckifVersioned[''Status'']'
+            - '                print (CheckifVersioned[''Status''])'
             - '                print ("This is a versioned Bucket")'
             - '                delete_versionedobjects(dest_bucket)'
             - '            else:'
-            - '                print "This is not a versioned bucket"'
+            - '                print ("This is not a versioned bucket")'
             - '                delete_NonVersionedobjects(dest_bucket)'
             - '        else:'
             - '            print("Nothing to do")'
@@ -283,10 +283,10 @@ Resources:
             - ''
       Description: Empty the S3 Bucket
       Handler: index.handler
-      Role: !GetAtt 
+      Role: !GetAtt
         - S3CleanUpRole
         - Arn
-      Runtime: python2.7
+      Runtime: python3.8
       Timeout: 240
     DependsOn: S3CleanUpRole
     Type: 'AWS::Lambda::Function'
