@@ -18,4 +18,4 @@ For architectural details, best practices, step-by-step instructions, and custom
 To post feedback, submit feature ideas, or report bugs, use the **Issues** section of this GitHub repo.
 If you'd like to submit code for this Quick Start, please review the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/). 
 
-See https://aws-ia.github.io/taskcat/ for more information
+See <https://aws-ia.github.io/taskcat/> for more information.
