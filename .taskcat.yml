@@ -34,12 +34,10 @@ project:
     - cn-northwest-1
   parameters:
     GitHubOAuthToken: --override--
-    GitHubRepoName: $[taskcat_random-string]
-    GitHubUser: --override--
+    GitHubRepoName: --override--
+    GitHubUsername: --override--
     QSS3BucketName: $[taskcat_autobucket]
     QSS3BucketRegion: $[taskcat_current_region]
-    ReleaseBranch: main
-    SourceRepoBranch: develop
 tests:
   defaults:
     regions:
