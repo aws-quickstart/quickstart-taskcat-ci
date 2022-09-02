@@ -2,7 +2,7 @@
 
 ## CI/CD Pipeline for AWS CloudFormation Templates Using TaskCat on the AWS Cloud
 
-This Quick Start deploys a continuous integration and continuous delivery (CI/CD) pipeline on the Amazon Web Services (AWS) Cloud for automatically testing AWS CloudFormation templates from a GitHub repository. 
+This Quick Start deploys a continuous integration and continuous delivery (CI/CD) pipeline on the Amazon Web Services (AWS) Cloud for automatically testing AWS CloudFormation templates from a GitHub repository.
 
 The Quick Start sets up a CI/CD environment that includes AWS TaskCat for testing, AWS CodePipeline for continuous integration, and AWS CodeBuild as your build service.
 
@@ -12,10 +12,10 @@ TaskCat is available as an [open-source tool in GitHub](https://github.com/aws-q
 
 ![Quick Start architecture for CI/CD Pipeline for AWS CloudFormation templates on AWS](https://d0.awsstatic.com/partner-network/QuickStart/datasheets/cicd-taskcat-pipeline.png)
 
-For architectural details, best practices, step-by-step instructions, and customization options, see the 
+For architectural details, best practices, step-by-step instructions, and customization options, see the
 [deployment guide](https://fwd.aws/mnpXR).
 
 To post feedback, submit feature ideas, or report bugs, use the **Issues** section of this GitHub repo.
-If you'd like to submit code for this Quick Start, please review the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/). 
+If you'd like to submit code for this Quick Start, please review the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/).
 
 See <https://aws-ia.github.io/taskcat/> for more information.
