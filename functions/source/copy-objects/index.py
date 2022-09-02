@@ -44,12 +44,13 @@ def delete_objects(bucket):
                     version = k['VersionId']
                     key = k['Key']
                     objects.append({'Key': key, 'VersionId': version})
-            except:
+            except Exception as e:
+                logger.error(f"Error appending delete markers: '{str(e)}'")
                 pass
             logger.info('deleting objects')
             s3.delete_objects(Bucket=bucket, Delete={'Objects': objects})
-            # objects = []
-        except:
+        except Exception as e:
+            logger.error(f"Error deleting S3 objects: '{str(e)}'")
             pass
     logger.info('bucket already empty')
 
