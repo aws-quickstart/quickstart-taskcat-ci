@@ -4,7 +4,7 @@ project:
   package_lambda: true
   lambda_source_path: functions/source
   lambda_zip_path: functions/packages
-  template: templates/taskcat-ci-pipeline.template
+  template: templates/taskcat-ci-entrypoint.template.yaml
   regions:
     - af-south-1
     - ap-east-1
@@ -33,9 +33,10 @@ project:
     - cn-north-1
     - cn-northwest-1
   parameters:
-    GitHubOAuthToken: --override--
-    GitHubRepoName: --override--
     GitHubUsername: --override--
+    GitHubOAuthToken: --override--
+    GitHubOwner: --override--
+    GitHubRepoName: --override--
     QSS3BucketName: $[taskcat_autobucket]
     QSS3BucketRegion: $[taskcat_current_region]
 tests:
