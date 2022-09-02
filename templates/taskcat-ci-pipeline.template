@@ -1,131 +1,103 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  Creates Pipeline and required resources for TaskCat CI. License: Apache 2.0
-  (Please do not remove)(qs-1ops82lkf)
+  CloudFormation template for deploying a TaskCat CI pipeline for testing
+  changes to a repository hosted in GitHub. (qs-1ops82lkf)
+Metadata:
+  LICENSE: Apache License, Version 2.0
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: GitHub configuration
+        Parameters:
+          - GitHubUsername
+          - GitHubOAuthToken
+          - GitHubRepoName
+          - SourceBranch
+          - ReleaseBranch
+      - Label:
+          default: AWS Quick Start Configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+    ParameterLabels:
+      GitHubUsername:
+        default: Username
+      GitHubOAuthToken:
+        default: Personal access token
+      GitHubRepoName:
+        default: Repository name
+      SourceBranch:
+        default: Source branch name
+      ReleaseBranch:
+        default: Release branch name
+      QSS3BucketName:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix:
+        default: Quick Start S3 key prefix
+Parameters:
+  GitHubUsername:
+    Type: String
+    Description: >-
+      GitHub username to use as the continuous integration (CI) service
+      account.
+  GitHubOAuthToken:
+    Type: String
+    Description: >-
+      GitHub personal access token for the CI service account user that must
+      have the 'repo' and 'admin:repo_hook' permissions
+      (https://github.com/settings/tokens).
+    NoEcho: true
+  GitHubRepoName:
+    Type: String
+    Description: Name of the repository to monitor for changes.
+  SourceBranch:
+    Type: String
+    Description: Name of the source branch to monitor.
+    Default: develop
+  ReleaseBranch:
+    Type: String
+    Description: >-
+      Release branch name. Upon successfull build, above branch will be
+      merged into this branch.
+    Default: main
+  QSS3BucketName:
+    Type: String
+    Description: >-
+      Name of the S3 bucket for your copy of the Quick Start assets.
+      Keep the default name unless you are customizing the template.
+      Changing the name updates code references to point to a new Quick
+      Start location. This name can include numbers, lowercase letters,
+      uppercase letters, and hyphens, but do not start or end with a hyphen (-).
+      See https://aws-quickstart.github.io/option1.html.
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: >-
+      The Quick Start bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a
+      hyphen (-).
+    Default: aws-quickstart
+  QSS3KeyPrefix:
+    Type: String
+    Description: >-
+      S3 key prefix that is used to simulate a directory for your copy of the
+      Quick Start assets. Keep the default prefix unless you are customizing
+      the template. Changing this prefix updates code references to point to
+      a new Quick Start location. This prefix can include numbers, lowercase
+      letters, uppercase letters, hyphens (-), and forward slashes (/). End
+      with a forward slash.
+      See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html
+      and https://aws-quickstart.github.io/option1.html.
+    AllowedPattern: ^([0-9a-zA-Z-.]+/)*$
+    ConstraintDescription:
+      The Quick Start S3 key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slashes (/).
+    Default: quickstart-taskcat-ci/
+Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, aws-quickstart]
 Resources:
-  CopyLambdasStack:
-    Type: 'AWS::CloudFormation::Stack'
-    Properties:
-      TemplateURL:
-        !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/copy-lambdas.template'
-          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        BucketName: !Ref ArtifactBucket
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3BucketRegion: !Ref QSS3BucketRegion
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-  SSMStack:
-    Type: 'AWS::CloudFormation::Stack'
-    DependsOn:
-      - CopyLambdasStack
-    Properties:
-      TemplateURL:
-        !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/ssm.template'
-          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        GitHubOAuthToken: !Ref GitHubOAuthToken
-        GitHubOAuthTokenId: !Join 
-          - '_'
-          - - GithubToken
-            # Returns pseudo random string captured from cfn stack ARN
-            - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
-        LambdaZipsBucket: !GetAtt 
-          - CopyLambdasStack
-          - Outputs.LambdaZipsBucket
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-  GitMergeLambda:
-    Type: 'AWS::Lambda::Function'
-    DependsOn:
-      - GitMergeRole
-      - CopyLambdasStack
-      - SSMStack
-    Properties:
-      Code:
-        S3Bucket: !GetAtt 
-          - CopyLambdasStack
-          - Outputs.LambdaZipsBucket
-        S3Key: !Sub '${QSS3KeyPrefix}functions/package/lambda.zip'
-      Description: Merge github branches
-      FunctionName: !Join 
-        - '_'
-        - - GitMerge
-          # Returns pseudo random string captured from cfn stack ARN
-          - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
-      Handler: !Join 
-        - .
-        - - git_merge
-          - lambda_handler
-      Role: !GetAtt 
-        - GitMergeRole
-        - Arn
-      Runtime: python3.6
-      Timeout: 30
-  GitMergeRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: 'sts:AssumeRole'
-      Path: /
-      Policies:
-        - PolicyName: GitMergeRolePolicy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                Resource:
-                  - !Join 
-                    - ''
-                    - - 'arn:aws:logs:'
-                      - !Ref 'AWS::Region'
-                      - ':'
-                      - !Ref 'AWS::AccountId'
-                      - ':log-group:/aws/lambda/*'
-              - Effect: Allow
-                Action:
-                  - 'codepipeline:GetPipeline'
-                  - 'codepipeline:GetPipelineExecution'
-                  - 'codepipeline:GetPipelineState'
-                  - 'codepipeline:ListPipelines'
-                  - 'codepipeline:ListPipelineExecutions'
-                Resource:
-                  - !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:*'
-              - Effect: Allow
-                Action:
-                  - 'codepipeline:GetJobDetails'
-                  - 'codepipeline:PutJobSuccessResult'
-                  - 'codepipeline:PutJobFailureResult'
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - 's3:GetObject'
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - 'ssm:Describe*'
-                  - 'ssm:Get*'
-                  - 'ssm:List*'
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - 'kms:Decrypt'
-                Resource: !GetAtt 
-                  - SSMStack
-                  - Outputs.KMSKeyArn
   ArtifactBucket:
-    Type: 'AWS::S3::Bucket'
+    Type: AWS::S3::Bucket
     Properties:
       AccessControl: Private
       LifecycleConfiguration:
@@ -134,142 +106,450 @@ Resources:
             Status: Enabled
       VersioningConfiguration:
         Status: Enabled
-  IAMRoleStack:
-    Type: 'AWS::CloudFormation::Stack'
-    DependsOn:
-      - ArtifactBucket
+  LambdaZipsBucket:
+    Type: AWS::S3::Bucket
     Properties:
-      TemplateURL:
-        !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/iam-roles.template'
-          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        ArtifactBucket: !Ref ArtifactBucket
-  CodePipelineStack:
-    Type: 'AWS::CloudFormation::Stack'
-    DependsOn:
-      - ArtifactBucket
-      - IAMRoleStack
+      VersioningConfiguration:
+        Status: Enabled
+  CopyObjectsRole:
+    Type: AWS::IAM::Role
     Properties:
-      TemplateURL:
-        !Sub
-          - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/pipeline.template'
-          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        GitHubUser: !Ref GitHubUser
-        GitHubRepoName: !Ref GitHubRepoName
-        SourceRepoBranch: !Ref SourceRepoBranch
-        ReleaseBranch: !Ref ReleaseBranch
-        GitHubOAuthToken: !Ref GitHubOAuthToken
-        GitHubOAuthTokenId: !Join 
-          - '_'
-          - - GithubToken
-            # Returns pseudo random string captured from cfn stack ARN
-            - !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref 'AWS::StackId' ]]]]
-        ArtifactBucket: !Ref ArtifactBucket
-        GitMergeLambda: !Ref GitMergeLambda
-        CodePipelineRoleArn: !GetAtt 
-          - IAMRoleStack
-          - Outputs.CodePipelineRoleArn
-        CodeBuildRoleArn: !GetAtt 
-          - IAMRoleStack
-          - Outputs.CodeBuildRoleArn
-Parameters:
-  GitHubUser:
-    Description: Enter GitHub username of the repository owner
-    Type: String
-  GitHubRepoName:
-    Description: Enter the repository name that should be monitored for changes
-    Type: String
-  SourceRepoBranch:
-    Description: Enter the branch name to be monitored
-    Type: String
-  ReleaseBranch:
-    Description: >-
-      Enter the release branch name. On successfull build, above branch will be
-      merged into this branch.
-    Type: String
-  GitHubOAuthToken:
-    Description: >-
-      Create a token with 'repo' and 'admin:repo_hook' permissions here
-      https://github.com/settings/tokens
-    Type: String
-    NoEcho: 'true'
-  QSS3BucketName:
-    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
-    ConstraintDescription: >-
-      Quick Start bucket name can include numbers, lowercase letters, uppercase
-      letters, and hyphens (-). It cannot start or end with a hyphen (-).
-    Default: aws-quickstart
-    Description: >-
-      S3 bucket name for the Quick Start assets. Quick Start bucket name can
-      include numbers, lowercase letters, uppercase letters, and hyphens (-). It
-      cannot start or end with a hyphen (-).
-    Type: String
-  QSS3BucketRegion:
-    Default: 'us-east-1'
-    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
-    Type: String
-  QSS3KeyPrefix:
-    AllowedPattern: '^[0-9a-zA-Z-/]*$'
-    ConstraintDescription: >-
-      Quick Start key prefix can include numbers, lowercase letters, uppercase
-      letters, hyphens (-), and forward slash (/).
-    Default: quickstart-taskcat-ci/
-    Description: >-
-      S3 key prefix for the Quick Start assets. Quick Start key prefix can
-      include numbers, lowercase letters, uppercase letters, hyphens (-), and
-      forward slash (/).
-    Type: String
-Metadata:
-  'AWS::CloudFormation::Interface':
-    ParameterGroups:
-      - Label:
-          default: GitHub Configuration
-        Parameters:
-          - GitHubUser
-          - GitHubRepoName
-          - SourceRepoBranch
-          - ReleaseBranch
-          - GitHubOAuthToken
-      - Label:
-          default: AWS Quick Start Configuration
-        Parameters:
-          - QSS3BucketName
-          - QSS3BucketRegion
-          - QSS3KeyPrefix
-    ParameterLabels:
-      GitHubUser:
-        default: Repository owner
-      GitHubRepoName:
-        default: Repository name
-      SourceRepoBranch:
-        default: Source branch
-      ReleaseBranch:
-        default: Release branch
-      GitHubOAuthToken:
-        default: OAuth2 token
-      QSS3BucketName:
-        default: Quick Start S3 Bucket Name
-      QSS3BucketRegion:
-        default: Quick Start S3 bucket region
-      QSS3KeyPrefix:
-        default: Quick Start S3 Key Prefix
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: 2012-10-17
+      Policies:
+        - PolicyName: CopyObjects
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: ListSourceAndDestinationBuckets
+                Effect: Allow
+                Action:
+                  - s3:GetBucketVersioning
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                Resource:
+                  - !Sub
+                      - arn:${AWS::Partition}:s3:::${S3Bucket}
+                      - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+                  - !GetAtt LambdaZipsBucket.Arn
+              - Sid: GetSourceBucketObjects
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: !Sub
+                  - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
+                  - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+              - Sid: ManageDestinationBucketObjects
+                Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource: !Sub ${LambdaZipsBucket.Arn}/${QSS3KeyPrefix}*
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  CopyObjectsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination S3 bucket
+      Handler: index.handler
+      Role: !GetAtt CopyObjectsRole.Arn
+      Runtime: python3.9
+      Timeout: 240
+      Code:
+        S3Bucket: !Ref QSS3BucketName
+        S3Key: !Sub ${QSS3KeyPrefix}functions/packages/copy-objects/lambda.zip
+  CopyObjects:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt CopyObjectsFunction.Arn
+      DestBucket: !Ref LambdaZipsBucket
+      Objects:
+        - functions/packages/cleanup-bucket/lambda.zip
+        - functions/packages/copy-objects/lambda.zip
+        - functions/packages/git-merge/lambda.zip
+      SourceBucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Prefix: !Ref QSS3KeyPrefix
+  S3CleanUpRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: EmptyArtifactBucket
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: ManageBucketObjects
+                Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource: !Sub ${ArtifactBucket.Arn}/*
+              - Sid: ListBucket
+                Effect: Allow
+                Action:
+                  - s3:GetBucketVersioning
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                Resource: !GetAtt ArtifactBucket.Arn
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  CleanUpS3BucketFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Empty the specified S3 bucket
+      Handler: index.handler
+      Role: !GetAtt S3CleanUpRole.Arn
+      Runtime: python3.9
+      Timeout: 240
+      Code:
+        S3Bucket: !Ref QSS3BucketName
+        S3Key: !Sub ${QSS3KeyPrefix}functions/packages/cleanup-bucket/lambda.zip
+  CleanUpS3Bucket:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      DestBucket: !Ref ArtifactBucket
+      ServiceToken: !GetAtt CleanUpS3BucketFunction.Arn
+  Secrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: TaskCat CI secrets.
+      SecretString: !Sub >-
+        {
+          "Token": "${GitHubOAuthToken}",
+          "Username": "${GitHubUsername}"
+        }
+  GitMergeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: GitMergePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: GetCodePipelineData
+                Effect: Allow
+                Action:
+                  - codepipeline:GetPipeline
+                  - codepipeline:GetPipelineExecution
+                  - codepipeline:GetPipelineState
+                  - codepipeline:ListPipelineExecutions
+                  - codepipeline:ListPipelines
+                Resource: !Sub arn:${AWS::Partition}:codepipeline:${AWS::Region}:${AWS::AccountId}:*
+              - Sid: PutCodePipelineJobResults
+                Effect: Allow
+                Action:
+                  - codepipeline:GetJobDetails
+                  - codepipeline:PutJobFailureResult
+                  - codepipeline:PutJobSuccessResult
+                Resource: '*'
+              - Sid: ListArtifactBucket
+                Effect: Allow
+                Action:
+                  - s3:GetBucketVersioning
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                Resource: !GetAtt ArtifactBucket.Arn
+              - Sid: GetArtifactBucketObjects
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub ${ArtifactBucket.Arn}/*
+              - Sid: GetSecrets
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref Secrets
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  GitMergeFunction:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - CopyObjects
+    Properties:
+      Code:
+        S3Bucket: !Ref LambdaZipsBucket
+        S3Key: !Sub ${QSS3KeyPrefix}functions/packages/git-merge/lambda.zip
+      Description: Merge GitHub branches
+      Handler: index.handler
+      Role: !GetAtt GitMergeRole.Arn
+      Runtime: python3.9
+      Timeout: 30
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: codebuild.amazonaws.com
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
+  CodeBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Description: !Sub >-
+        Submit build jobs for ${GitHubRepoName} as part of a CI/CD pipeline.
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+        EnvironmentVariables:
+          - Name: ARTIFACT_BUCKET
+            Value: !Ref ArtifactBucket
+          - Name: PROJECT_NAME
+            Value: !Ref GitHubRepoName
+          - Name: SOURCE_BRANCH
+            Value: !Ref SourceBranch
+        PrivilegedMode: true
+      Visibility: PRIVATE
+      Source:
+        Type: CODEPIPELINE
+        GitCloneDepth: 1
+        BuildSpec: !Sub |
+          version: 0.2
 
-Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+          env:
+            shell: bash
+            secrets-manager:
+              GITHUB_TOKEN: ${Secrets}:Token
+              GITHUB_USERNAME: ${Secrets}:Username
+              TASKCAT_OVERRIDES: arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${GitHubRepoName}
 
+          phases:
+            install:
+              runtime-versions:
+                python: 3.x
+              commands:
+                - echo "Entered the install phase..."
+                - apt-get -y update
+                - echo "Installing system dependencies..."
+                - apt-get -y install zip gzip tar
+                - echo "Installing python dependencies..."
+                - pip3 install cfn-lint dataclasses-jsonschema==2.15.1 taskcat yq
+            pre_build:
+              commands:
+                - echo "Entered the pre_build phase..."
+                - echo "Current directory is $CODEBUILD_SRC_DIR"
+                - ls -lA
+                - dirname=${!PWD##*/}
+                - echo "Directory name $dirname"
+                - cd ..
+                - mv $dirname $PROJECT_NAME
+                - ls -lA
+                - cd $PROJECT_NAME
+                - echo "https://$GITHUB_USERNAME:$GITHUB_TOKEN@github.com" > ~/.git-credentials
+                - git config --global credential.helper store
+                - git config --global url."https://github.com/".insteadOf "git@github.com:"
+                - git config --global init.defaultBranch ${ReleaseBranch}
+                - git init
+                - git remote add origin https://github.com/$GITHUB_USERNAME/$PROJECT_NAME.git
+                - git fetch
+                - git checkout --force --track origin/$SOURCE_BRANCH
+                - |
+                  git config -f .gitmodules --get-regexp '^submodule\..*\.path$' |
+                    while read path_key path
+                    do
+                        url_key=$(echo $path_key | sed 's/\.path/.url/')
+                        url=$(git config -f .gitmodules --get "$url_key")
+                        git submodule add $url $path
+                    done
+                - git submodule init
+                - git submodule update --init --recursive
+                - echo "Creating TaskCat overrides file..."
+                - echo $TASKCAT_OVERRIDES | yq -y > ./.taskcat_overrides.yml
+                - ls -lA
+                - echo "Verifying TaskCat installation..."
+                - taskcat
+            build:
+              commands:
+                - echo "Entered the build phase..."
+                - echo "Running TaskCat tests..."
+                - taskcat test run --minimal-output
+                - |
+                  if $(grep -Fq "CREATE_FAILED" taskcat_outputs/index.html)
+                  then
+                    echo "Build failed!"
+                    exit 1
+                  else
+                    echo "Build passed!"
+                    exit 0
+                  fi
+              finally:
+                - ls -1 taskcat_outputs
+                - ls -1 taskcat_outputs | while read LOG; do cat taskcat_outputs/$LOG; done
+                - >- # Do not remove
+                  echo "Zipping and uploading report to S3 bucket: '$ARTIFACT_BUCKET'..."
+                - zip -r taskcat_report.zip taskcat_outputs
+                - aws s3 cp taskcat_report.zip s3://$ARTIFACT_BUCKET/taskcat_reports/$CODEBUILD_BUILD_ID.zip
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: codepipeline.amazonaws.com
+      Policies:
+        - PolicyName: TaskCat-CICD-CodePipelineService
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: ListArtifact
+                Effect: Allow
+                Action:
+                  - s3:GetBucketVersioning
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                Resource: !GetAtt ArtifactBucket.Arn
+              - Sid: PutArtifacts
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource: !Sub ${ArtifactBucket.Arn}/*
+              - Sid: ManageCloudFormation
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:DescribeStacks
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:SetStackPolicy
+                  - cloudformation:UpdateStack
+                  - cloudformation:ValidateTemplate
+                Resource: !Sub arn:${AWS::Partition}:cloudformation:*:*:*
+              - Sid: PassRoleToCloudFormation
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: cloudformation.amazonaws.com
+              - Sid: StartBuilds
+                Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                Resource: !GetAtt CodeBuild.Arn
+              - Sid: GetLambda
+                Effect: Allow
+                Action:
+                  - lambda:GetAccountSettings
+                  - lambda:GetAlias
+                  - lambda:GetEventSourceMapping
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:GetPolicy
+                  - lambda:InvokeFunction
+                  - lambda:ListAliases
+                  - lambda:ListEventSourceMappings
+                  - lambda:ListFunctions
+                  - lambda:ListTags
+                  - lambda:ListVersionsByFunction
+                Resource: !Sub arn:${AWS::Partition}:lambda:*:*:*
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSCodeCommitFullAccess
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: GitHub
+              InputArtifacts: []
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              OutputArtifacts:
+                - Name: Source
+              Configuration:
+                Owner: !Ref GitHubUsername
+                Repo: !Ref GitHubRepoName
+                Branch: !Ref SourceBranch
+                OAuthToken: !Ref GitHubOAuthToken
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: CodeBuild
+              InputArtifacts:
+                - Name: Source
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              OutputArtifacts: []
+              Configuration:
+                ProjectName: !Ref CodeBuild
+              RunOrder: 2
+        - Name: Deploy
+          Actions:
+            - Name: Git-merge
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Version: 1
+                Provider: Lambda
+              Configuration:
+                FunctionName: !Ref GitMergeFunction
+                UserParameters: !Sub >-
+                  {
+                    "owner": "${GitHubUsername}",
+                    "repo": "${GitHubRepoName}",
+                    "baseBranch": "${ReleaseBranch}",
+                    "headBranch": "${SourceBranch}",
+                    "secretsManagerArn": "${Secrets}"
+                  }
+              RunOrder: 3
 Outputs:
   CodePipelineURL:
-    Description: The URL of the created Pipeline
-    Value: !Sub 
-      - >-
-        https://${AWS::Region}.console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${CodePipelineName}
-      - CodePipelineName: !GetAtt 
-          - CodePipelineStack
-          - Outputs.CodePipelineName
+    Description: The URL of the created pipeline.
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${CodePipeline}
   TaskCatReports:
-    Description: Path to the TaskCat report. Each report is named as CODEBUILD_BUILD_ID.zip
-    Value: !Sub 's3://${ArtifactBucket}/taskcat_reports/'
+    Description: Path to the TaskCat report. Each report is named as CODEBUILD_BUILD_ID.zip.
+    Value: !Sub s3://${ArtifactBucket}/taskcat_reports/
