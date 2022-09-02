@@ -46,9 +46,9 @@ Parameters:
   GitHubOAuthToken:
     Type: String
     Description: >-
-      GitHub personal access token for the CI service account user that must
-      have the 'repo' and 'admin:repo_hook' permissions
-      (https://github.com/settings/tokens).
+      GitHub personal access token for the continuous integration (CI) service
+      account user. This token must be granted the 'repo' and 'admin:repo_hook'
+      permission sets (https://github.com/settings/tokens).
     NoEcho: true
   GitHubOwner:
     Type: String
@@ -65,8 +65,8 @@ Parameters:
   ReleaseBranch:
     Type: String
     Description: >-
-      Release branch name. Upon successfull build, above branch will be
-      merged into this branch.
+      Release branch name. Upon successfull build, commits in the source branch
+      will be merged into this branch.
     Default: main
   QSS3BucketName:
     Type: String
