@@ -11,6 +11,7 @@ Metadata:
         Parameters:
           - GitHubUsername
           - GitHubOAuthToken
+          - GitHubOwner
           - GitHubRepoName
           - SourceBranch
           - ReleaseBranch
@@ -24,6 +25,8 @@ Metadata:
         default: Username
       GitHubOAuthToken:
         default: Personal access token
+      GitHubOwner:
+        default: Repository owner
       GitHubRepoName:
         default: Repository name
       SourceBranch:
@@ -47,6 +50,11 @@ Parameters:
       have the 'repo' and 'admin:repo_hook' permissions
       (https://github.com/settings/tokens).
     NoEcho: true
+  GitHubOwner:
+    Type: String
+    Description: >-
+      GitHub owner (username or organization) where the repository is located
+      (https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories).
   GitHubRepoName:
     Type: String
     Description: Name of the repository to monitor for changes.
@@ -330,6 +338,8 @@ Resources:
             Value: !Ref ArtifactBucket
           - Name: PROJECT_NAME
             Value: !Ref GitHubRepoName
+          - Name: PROJECT_OWNER
+            Value: !Ref GitHubOwner
           - Name: SOURCE_BRANCH
             Value: !Ref SourceBranch
         PrivilegedMode: true
@@ -374,7 +384,7 @@ Resources:
                 - git config --global url."https://github.com/".insteadOf "git@github.com:"
                 - git config --global init.defaultBranch ${ReleaseBranch}
                 - git init
-                - git remote add origin https://github.com/$GITHUB_USERNAME/$PROJECT_NAME.git
+                - git remote add origin https://github.com/$PROJECT_OWNER/$PROJECT_NAME.git
                 - git fetch
                 - git checkout --force --track origin/$SOURCE_BRANCH
                 - |
@@ -508,7 +518,7 @@ Resources:
               OutputArtifacts:
                 - Name: Source
               Configuration:
-                Owner: !Ref GitHubUsername
+                Owner: !Ref GitHubOwner
                 Repo: !Ref GitHubRepoName
                 Branch: !Ref SourceBranch
                 OAuthToken: !Ref GitHubOAuthToken
@@ -539,7 +549,7 @@ Resources:
                 FunctionName: !Ref GitMergeFunction
                 UserParameters: !Sub >-
                   {
-                    "owner": "${GitHubUsername}",
+                    "owner": "${GitHubOwner}",
                     "repo": "${GitHubRepoName}",
                     "baseBranch": "${ReleaseBranch}",
                     "headBranch": "${SourceBranch}",
