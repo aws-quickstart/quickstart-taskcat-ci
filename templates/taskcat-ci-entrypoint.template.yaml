@@ -1,7 +1,8 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  CloudFormation template for deploying a TaskCat CI pipeline for testing
-  changes to a repository hosted in GitHub. (qs-1ops82lkf)
+  CloudFormation template for deploying a TaskCat CI/CD pipeline for testing
+  changes to AWS CloudFormation templates stored in a GitHub repository.
+  (qs-1ops82lkf)
 Metadata:
   LICENSE: Apache License, Version 2.0
   AWS::CloudFormation::Interface:
