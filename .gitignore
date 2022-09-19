@@ -6,7 +6,7 @@ functions/packages/
 *.zip
 
 # Docs
-# docs/
+docs/
 index.html
 prod_example.html
 
