@@ -115,79 +115,6 @@ Resources:
             Status: Enabled
       VersioningConfiguration:
         Status: Enabled
-  LambdaZipsBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      VersioningConfiguration:
-        Status: Enabled
-  CopyObjectsRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Action: sts:AssumeRole
-            Principal:
-              Service: lambda.amazonaws.com
-        Version: 2012-10-17
-      Policies:
-        - PolicyName: CopyObjects
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Sid: ListSourceAndDestinationBuckets
-                Effect: Allow
-                Action:
-                  - s3:GetBucketVersioning
-                  - s3:ListBucket
-                  - s3:ListBucketVersions
-                Resource:
-                  - !Sub
-                      - arn:${AWS::Partition}:s3:::${S3Bucket}
-                      - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-                  - !GetAtt LambdaZipsBucket.Arn
-              - Sid: GetSourceBucketObjects
-                Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                Resource: !Sub
-                  - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
-                  - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-              - Sid: ManageDestinationBucketObjects
-                Effect: Allow
-                Action:
-                  - s3:DeleteObject
-                  - s3:DeleteObjectVersion
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                  - s3:PutObject
-                Resource: !Sub ${LambdaZipsBucket.Arn}/${QSS3KeyPrefix}*
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-  CopyObjectsFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Description: Copies objects from a source S3 bucket to a destination S3 bucket
-      Handler: index.handler
-      Role: !GetAtt CopyObjectsRole.Arn
-      Runtime: python3.9
-      Timeout: 240
-      Code:
-        S3Bucket: !Ref QSS3BucketName
-        S3Key: !Sub ${QSS3KeyPrefix}functions/packages/copy-objects/lambda.zip
-  CopyObjects:
-    Type: AWS::CloudFormation::CustomResource
-    Properties:
-      ServiceToken: !GetAtt CopyObjectsFunction.Arn
-      DestBucket: !Ref LambdaZipsBucket
-      Objects:
-        - functions/packages/cleanup-bucket/lambda.zip
-        - functions/packages/copy-objects/lambda.zip
-        - functions/packages/git-merge/lambda.zip
-      SourceBucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Prefix: !Ref QSS3KeyPrefix
   S3CleanUpRole:
     Type: AWS::IAM::Role
     Properties:
@@ -298,11 +225,9 @@ Resources:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
   GitMergeFunction:
     Type: AWS::Lambda::Function
-    DependsOn:
-      - CopyObjects
     Properties:
       Code:
-        S3Bucket: !Ref LambdaZipsBucket
+        S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
         S3Key: !Sub ${QSS3KeyPrefix}functions/packages/git-merge/lambda.zip
       Description: Merge GitHub branches
       Handler: index.handler
