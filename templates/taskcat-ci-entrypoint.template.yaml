@@ -288,9 +288,9 @@ Resources:
                 python: 3.x
               commands:
                 - echo "Entered the install phase..."
-                - apt-get -y update
+                - apt-get -qy update
                 - echo "Installing system dependencies..."
-                - apt-get -y install zip gzip tar
+                - apt-get -qy install zip gzip tar
                 - echo "Installing python dependencies..."
                 - pip3 install cfn-lint taskcat yq
             pre_build:
