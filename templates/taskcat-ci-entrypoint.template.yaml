@@ -292,7 +292,7 @@ Resources:
                 - echo "Installing system dependencies..."
                 - apt-get -qy install zip gzip tar
                 - echo "Installing python dependencies..."
-                - pip3 install cfn-lint pre-commit taskcat yq
+                - pip3 -q install cfn-lint pre-commit taskcat yq
                 - echo "Configuring taskcat..."
                 - |
                   cat << EOF > ~/.taskcat.yml
