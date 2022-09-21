@@ -1,2 +1,23 @@
-taskcat_outputs
-.taskcat
+# TaskCat
+taskcat_outputs/
+.taskcat/
+.taskcat_overrides.yml
+functions/packages/
+*.zip
+
+# Docs
+docs/
+index.html
+prod_example.html
+
+# Python
+.python-version
+venv/
+env/
+
+# macOS
+.DS_Store
+
+# IDE workspace settings
+.vscode/
+.idea/
