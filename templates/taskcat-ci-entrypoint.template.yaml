@@ -343,6 +343,12 @@ Resources:
                 - ls -lA
                 - echo "Verifying TaskCat installation..."
                 - taskcat
+                - |
+                  if [ -f ~/.gitcredentials ]
+                  then
+                    echo "Removing git credentials..."
+                    rm -f ~/.gitcredentials
+                  fi
             build:
               commands:
                 - echo "Entered the build phase..."
