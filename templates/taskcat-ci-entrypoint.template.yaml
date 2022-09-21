@@ -293,6 +293,16 @@ Resources:
                 - apt-get -qy install zip gzip tar
                 - echo "Installing python dependencies..."
                 - pip3 install cfn-lint taskcat yq
+                - echo "Installing custom cfn-lint rules..."
+                - wget -nv https://github.com/aws-quickstart/qs-cfn-lint-rules/archive/refs/heads/main.zip
+                - unzip -q ./main.zip
+                - mv ./qs-cfn-lint-rules-main ~/qs-cfn-lint-rules
+                - pip3 install -e ~/qs-cfn-lint-rules
+                - |
+                  cat << EOF > ~/.cfnlintrc
+                  append_rules:
+                    - ~/qs-cfn-lint-rules/qs_cfn_lint_rules/
+                  EOF
             pre_build:
               commands:
                 - echo "Entered the pre_build phase..."
