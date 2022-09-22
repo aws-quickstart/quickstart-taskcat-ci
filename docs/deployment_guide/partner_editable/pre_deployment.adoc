@@ -1,3 +1,24 @@
 //Include any predeployment steps here, such as signing up for a Marketplace AMI or making any changes to a partner account. If there are no predeployment steps, leave this file empty.
 
 == Predeployment steps
+
+=== Repository
+
+This project requires a GitHub repository that contains the AWS CloudFormation templates that you want to test as part of the CI/CD pipeline as well as a {partner-product-short-name} configuration file.
+
+* *Templates folder*: All CloudFormation template files must be stored in a folder named `templates`. Both JSON and YAML format CloudFormation templates are supported.
+* *{partner-product-short-name} config file*: The config file must be named `.taskcat.yml` and stored in the root of the repository. It should specify the name of the template in the templates folder that needs to be tested, and the configuration of each test that {partner-product-short-name} should run. For more information about how to configure this file, see the https://aws-ia.github.io/taskcat/docs/usage/GENERAL_USAGE/#config-files[documentation].
+
+If you want to give TaskCat a trial run, you can download and use any of the AWS CloudFormation templates and configuration files in the Quick Start GitHub organization at https://github.com/aws-quickstart.
+
+=== Access
+
+. Log into your https://github.com/[GitHub account].
+. https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token[Create a personal access token] (also known as an OAuth2 token) and grant it the `admin:repo_hook` and `repo` https://docs.github.com/en/developers/apps/building-oauth-apps/scopes-for-oauth-apps#available-scopes[scopes]. If you already have a token with these permissions, you can use that. You can find a list of all of your personal access tokens in https://github.com/settings/tokens.
+. Make a note of the following information in GitHub, as these values will be used as inputs when deploying the {partner-product-mid-name}:
+** *Personal access token name*.
+** *Repository owner*: This is the GitHub organization or user that owns the repository.
+** *Repository name*: This repository should have the folder structure and files described earlier in the <<Repository>> section.
+** *Source branch name*: This is the branch that CodePipeline should monitor for changes.
+** *Release branch name*: This is the branch that the source branch will be merged into after a successful test.
+. https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html[Create an AWS Secrets Manager secret] for storing sensitive and/or deployment&#8209;specific input parameter override values for the {partner-product-short-name} tests. The name of this secret must match the name of the repository, and it must be created in the same Region as the {partner-product-mid-name}.
