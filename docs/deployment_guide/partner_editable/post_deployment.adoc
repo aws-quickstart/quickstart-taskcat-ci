@@ -1,3 +1,9 @@
 // Include any postdeployment steps here, such as steps necessary to test that the deployment was successful. If there are no postdeployment steps, leave this file empty.
 
 == Postdeployment steps
+
+In the AWS CloudFormation console, go to the Outputs tab of your stack and click the link next to `URL`, which will load the new CI/CD pipeline running in the CodePipeline console, as shown in <<pipeline1>>.
+
+[#pipeline1]
+.CI/CD pipeline for the templates in your GitHub repository
+image::../docs/deployment_guide/images/codepipeline.png[CodePipeline CI/CD pipeline]
