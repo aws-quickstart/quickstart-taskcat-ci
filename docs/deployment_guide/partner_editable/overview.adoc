@@ -1,4 +1,8 @@
-This Quick Start deploys {partner-product-name} on the AWS Cloud. This guide covers the steps necessary to deploy this Quick Start.
+This Quick Start deploys a {partner-product-long-name} on the AWS Cloud. This guide covers the steps necessary to deploy this Quick Start.
+
+{partner-product-short-name} is an open source tool built for testing AWS CloudFormation templates. {partner-product-short-name} tests your CloudFormation template by deploying it in one or more specified AWS Regions simultaneously in one or more input parameter configurations, and then generates a report afterward with a pass/fail grade for each test. TaskCat is implemented in Python and is available in two formats: as a https://pypi.org/project/taskcat/[pip module] and in a https://hub.docker.com/r/taskcat/taskcat[Docker container].
+
+NOTE: {partner-product-short-name} was originally developed by the AWS Integration & Automation team as an internal tool for automatically testing AWS CloudFormation templates, but has since been released as open source.
 
 // For advanced information about the product, troubleshooting, or additional functionality, refer to the https://{quickstart-github-org}.github.io/{quickstart-project-name}/operational/index.html[Operational Guide^].
 
