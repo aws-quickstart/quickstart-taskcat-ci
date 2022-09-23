@@ -325,6 +325,7 @@ Resources:
                 - mv $dirname $PROJECT_NAME
                 - ls -lA
                 - cd $PROJECT_NAME
+                - echo "Temporarily adding git credential store..."
                 - echo "https://$GITHUB_USERNAME:$GITHUB_TOKEN@github.com" > ~/.git-credentials
                 - git config --global credential.helper store
                 - git config --global url."https://github.com/".insteadOf "git@github.com:"
@@ -348,12 +349,8 @@ Resources:
                 - ls -lA
                 - echo "Verifying TaskCat installation..."
                 - taskcat
-                - |
-                  if [ -f ~/.gitcredentials ]
-                  then
-                    echo "Removing git credentials..."
-                    rm -f ~/.gitcredentials
-                  fi
+                - echo "Removing git credential store..."
+                - rm -f ~/.git-credentials
             build:
               commands:
                 - echo "Entered the build phase..."
