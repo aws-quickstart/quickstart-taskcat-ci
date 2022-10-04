@@ -1,8 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  CloudFormation template for deploying a TaskCat CI/CD pipeline for testing
-  changes to AWS CloudFormation templates stored in a GitHub repository.
-  (qs-1ops82lkf)
+  CloudFormation template for deploying a TaskCat CI/CD pipeline for testing changes to AWS CloudFormation templates stored in a GitHub repository. (qs-1ops82lkf)
 Metadata:
   LICENSE: Apache License, Version 2.0
   AWS::CloudFormation::Interface:
@@ -51,11 +49,10 @@ Parameters:
   GitHubOwner:
     Type: String
     Description: >-
-      GitHub owner (username or organization) where the repository is located
-      (https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories).
+      GitHub owner (user name or organization) where the repository is located. Refer to https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories.
   GitHubRepoName:
     Type: String
-    Description: Name of the repository to monitor for changes.
+    Description: Name of the source repository to monitor.
   SourceBranch:
     Type: String
     Description: Name of the source branch to monitor.
@@ -63,41 +60,27 @@ Parameters:
   ReleaseBranch:
     Type: String
     Description: >-
-      Release branch name. Upon successfull build, commits in the source branch
-      will be merged into this branch.
+      Release branch name. Commits in the source branch merge into this branch.
     Default: main
   QSS3BucketName:
-    Type: String
+    AllowedPattern: ^[0-9a-z]+([0-9a-z-\.]*[0-9a-z])*$
+    ConstraintDescription: >-
+      The S3 bucket name can include numbers, lowercase letters,
+      and hyphens (-), but it cannot start or end with a hyphen.
+    Default: aws-quickstart
     Description: >-
-      Name of the S3 bucket for your copy of the Quick Start assets.
-      Keep the default name unless you are customizing the template.
-      Changing the name updates code references to point to a new Quick
-      Start location. This name can include numbers, lowercase letters,
-      and hyphens, but do not start or end with a hyphen (-). See
-      https://aws-quickstart.github.io/option1.html.
+      Name of the S3 bucket for your copy of the deployment assets. Keep the default name unless you are customizing the template. Changing the name updates code references to point to a new location.
     MinLength: 3
     MaxLength: 63
-    AllowedPattern: ^[0-9a-z]+([0-9a-z-]*[0-9a-z])*$
-    ConstraintDescription: >-
-      The Quick Start bucket name can include numbers, lowercase letters, and
-      hyphens (-). It cannot start or end with a hyphen (-).
-    Default: aws-quickstart
-  QSS3KeyPrefix:
     Type: String
-    Description: >-
-      S3 key prefix that is used to simulate a directory for your copy of the
-      Quick Start assets. Keep the default prefix unless you are customizing
-      the template. Changing this prefix updates code references to point to
-      a new Quick Start location. This prefix can include numbers, lowercase
-      letters, uppercase letters, hyphens (-), and forward slashes (/). End
-      with a forward slash.
-      See https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html
-      and https://aws-quickstart.github.io/option1.html.
-    AllowedPattern: ^([0-9a-zA-Z-.]+/)*$
-    ConstraintDescription:
-      The Quick Start S3 key prefix can include numbers, lowercase letters,
-      uppercase letters, hyphens (-), and forward slashes (/).
+  QSS3KeyPrefix:
+    AllowedPattern: ^([0-9a-zA-Z!-_\.\*'\(\)/]+/)*$
+    ConstraintDescription: >-
+      The S3 key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), underscores (_), periods (.), asterisks (*), single quotes ('), open parenthesis ((), close parenthesis ()), and forward slashes (/). End the prefix with a forward slash.
     Default: quickstart-taskcat-ci/
+    Description: >-
+      S3 key prefix that is used to simulate a folder for your copy of the deployment assets. Keep the default prefix unless you are customizing the template. Changing the prefix updates code references to point to a new location.
+    Type: String
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, aws-quickstart]
 Resources:
@@ -511,3 +494,6 @@ Outputs:
   TaskCatReports:
     Description: Path to the TaskCat report. Each report is named as CODEBUILD_BUILD_ID.zip.
     Value: !Sub s3://${ArtifactBucket}/taskcat_reports/
+  Postdeployment:
+    Description: See the deployment guide for postdeployment steps.
+    Value: https://fwd.aws/BrGzY?
