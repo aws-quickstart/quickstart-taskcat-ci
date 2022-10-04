@@ -1,0 +1,16 @@
+:quickstart-project-name: quickstart-taskcat-ci
+:quickstart-github-org: aws-quickstart
+:partner-product-name: TaskCat CI/CD pipeline for AWS CloudFormation
+:partner-product-long-name: TaskCat continuous improvement/continuous deployment (CI/CD) pipeline for AWS CloudFormation
+:partner-product-mid-name: TaskCat CI/CD pipeline
+:partner-product-short-name: TaskCat
+// :partner-company-name: Example Company Name, Ltd.
+:doc-month: October
+:doc-year: 2022
+// :partner-contributors: John Smith, {partner-company-name}
+// :other-contributors: Akua Mansa, Trek10
+// :aws-contributors: Janine Singh, AWS IoT Partner team
+:aws-ia-contributors: Shivansh Singh, Tony Vattathil, and Troy Lindsay, AWS Integration & Automation team
+:deployment_time: 15 minutes
+:default_deployment_region: us-west-2
+// :private_repo:

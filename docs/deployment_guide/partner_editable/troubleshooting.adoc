@@ -1,0 +1,16 @@
+// Add any unique troubleshooting steps here.
+
+For troubleshooting common Quick Start issues, refer to the https://fwd.aws/rA69w?[AWS Quick Start General Information Guide^] and https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting CloudFormation^].
+
+== Resources
+
+*{partner-product-short-name} documentation*
+
+* https://aws-quickstart.github.io/auto-testing.html[{partner-product-short-name} user documentation]
+* https://aws-ia.github.io/taskcat/reference/taskcat/[{partner-product-short-name} API reference]
+
+*{partner-product-short-name} source code*
+
+* https://github.com/aws-quickstart/taskcat[GitHub repository]
+* https://pypi.org/project/taskcat/[Pip module]
+* https://hub.docker.com/r/taskcat/taskcat[Docker Hub]
