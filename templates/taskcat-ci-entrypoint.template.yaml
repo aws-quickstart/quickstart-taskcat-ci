@@ -17,13 +17,13 @@ Metadata:
           - SourceBranch
           - ReleaseBranch
       - Label:
-          default: AWS Quick Start Configuration
+          default: AWS Quick Start configuration
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
     ParameterLabels:
       GitHubUsername:
-        default: Username
+        default: User name
       GitHubOAuthToken:
         default: Personal access token
       GitHubOwner:
@@ -42,14 +42,11 @@ Parameters:
   GitHubUsername:
     Type: String
     Description: >-
-      GitHub username to use as the continuous integration (CI) service
-      account.
+      GitHub user name to use as the continuous integration (CI) service account.
   GitHubOAuthToken:
     Type: String
     Description: >-
-      GitHub personal access token for the continuous integration (CI) service
-      account user. This token must be granted the 'repo' and 'admin:repo_hook'
-      permission sets (https://github.com/settings/tokens).
+      GitHub personal access token for the continuous integration (CI) service account user. This token must be granted the "repo" and "admin:repo_hook" permission sets. Refer to https://github.com/settings/tokens.
     NoEcho: true
   GitHubOwner:
     Type: String
