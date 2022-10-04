@@ -9,7 +9,7 @@ This project requires a GitHub repository that contains the AWS CloudFormation t
 * *Templates folder*: All CloudFormation template files must be stored in a folder named `templates`. Both JSON and YAML format CloudFormation templates are supported.
 * *{partner-product-short-name} config file*: The config file must be named `.taskcat.yml` and stored in the root of the repository. It should specify the name of the template in the templates folder that needs to be tested, and the configuration of each test that {partner-product-short-name} should run. For more information about how to configure this file, see the https://aws-ia.github.io/taskcat/docs/usage/GENERAL_USAGE/#config-files[documentation].
 
-If you want to give TaskCat a trial run, you can download and use any of the AWS CloudFormation templates and configuration files in the Quick Start GitHub organization at https://github.com/aws-quickstart.
+If you want to give TaskCat a trial run, you can download and use any of the AWS CloudFormation templates and configuration files in the Partner Solutions GitHub organization at https://github.com/aws-quickstart.
 
 === Access
 
