@@ -1,4 +1,4 @@
-# TaskCat CI/CD pipeline for AWS CloudFormation
+# TaskCat CI/CD pipeline for AWS CloudFormation—AWS Solution
 
 For architectural details, step-by-step instructions, and customization options, see the [deployment guide](https://fwd.aws/BrGzY?).
 
