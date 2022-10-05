@@ -1,5 +1,5 @@
 // Edit this placeholder text as necessary to describe the deployment options.
 
-This Quick Start provides the following deployment option:
+This AWS Solution provides the following deployment option:
 
 * http://qs_launch_permalink[Deploy {partner-product-short-name} into your AWS account^].

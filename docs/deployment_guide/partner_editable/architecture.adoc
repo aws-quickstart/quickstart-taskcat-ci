@@ -9,7 +9,7 @@ AWS Cloud.
 .Quick Start architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/architecture_diagram.png[Architecture]
 
-As shown in <<architecture1>>, this Quick Start sets up the following:
+As shown in <<architecture1>>, this AWS Solution sets up the following:
 
 * An AWS Secrets Manager secret for storing credentials.
 * An AWS CodePipeline CI/CD pipeline, which is triggered when commits are pushed to the specified source branch in your GitHub repository.
