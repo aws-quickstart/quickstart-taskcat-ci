@@ -15,7 +15,7 @@ Metadata:
           - SourceBranch
           - ReleaseBranch
       - Label:
-          default: AWS Quick Start configuration
+          default: AWS Solution configuration
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
@@ -33,9 +33,9 @@ Metadata:
       ReleaseBranch:
         default: Release branch name
       QSS3BucketName:
-        default: Quick Start S3 bucket name
+        default: AWS Solution S3 bucket name
       QSS3KeyPrefix:
-        default: Quick Start S3 key prefix
+        default: AWS Solution S3 key prefix
 Parameters:
   GitHubUsername:
     Type: String
