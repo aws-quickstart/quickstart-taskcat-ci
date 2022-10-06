@@ -2,4 +2,4 @@
 
 This AWS Solution provides the following deployment option:
 
-* http://qs_launch_permalink[Deploy {partner-product-short-name} into your AWS account^].
+* https://fwd.aws/PWeyz?[Deploy {partner-product-short-name} into your AWS account^].
