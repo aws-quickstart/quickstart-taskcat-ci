@@ -1,28 +1,26 @@
 :xrefstyle: short
 
-Deploying this Quick Start with default parameters builds the following {partner-product-short-name} environment in the
+Deploying this Partner Solution with default parameters builds the following {partner-product-short-name} environment in the
 AWS Cloud.
 
 // Replace this example diagram with your own. Follow our wiki guidelines: https://w.amazon.com/bin/view/AWS_Quick_Starts/Process_for_PSAs/#HPrepareyourarchitecturediagram. Upload your source PowerPoint file to the GitHub {deployment name}/docs/images/ directory in its repository.
 
 [#architecture1]
-.Quick Start architecture for {partner-product-short-name} on AWS
+.AWS Partner Solution architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/architecture_diagram.png[Architecture]
 
 As shown in <<architecture1>>, this AWS Solution sets up the following:
 
-* An AWS Secrets Manager secret for storing credentials.
-* An AWS CodePipeline CI/CD pipeline, which is triggered when commits are pushed to the specified source branch in your GitHub repository.
-* An AWS CodeBuild project for running {partner-product-short-name}, which:
-** Builds and packages code bundles for your project's AWS Lambda functions, AWS CodeBuild projects, et cetera.
-** Uploads the AWS CloudFormation templates and code bundles to an Amazon S3 template bucket.
-** Performs all configured end&#8209;to&#8209;end tests of your project's AWS CloudFormation templates, which consists of deploying a CloudFormation stack for each configured {partner-product-short-name} test in each test's specified Regions, logging the results, followed by destroying each stack.
-* An Amazon Simple Storage Service (Amazon S3) bucket for storing the build artifacts- including the {partner-product-short-name} report.
-* An AWS Lambda function for merging the source branch of the repository into the release branch upon success.
+* CodePipeline to automate a CI/CD pipeline with source, build/test, and deploy stages.
+* AWS CodeBuild to retrieve pipeline artifacts from an Amazon S3 bucket and run TaskCat.
+* TaskCat to deploy and test CloudFormation templates and save a report of test results to an S3 bucket.
+* AWS Secrets Manager to store credentials used by CodeBuild for Git access
+* Two S3 buckets, one for pipeline artifacts and another for TaskCat reports.
+* An AWS Lambda function to merge tested code with the release branch in the GitHub repository.
 
 === Pipeline workflow
 
-As implemented by this Quick Start, the deployment of the CI/CD pipeline for AWS CloudFormation templates requires two branches in the GitHub repository: a source branch and a release branch. The source branch is actively used for development and needs to be tested for any code changes. The release branch contains the stable code that has been tested successfully.
+The deployment of the CI/CD pipeline for AWS CloudFormation templates requires two branches in the GitHub repository: a source branch and a release branch. The source branch is actively used for development and needs to be tested for any code changes. The release branch contains the stable code that has been tested successfully.
 
 The CI/CD pipeline consists of three stages:
 
