@@ -19,6 +19,6 @@ If you want to give TaskCat a trial run, you can download and use any of the AWS
 ** *Personal access token name*.
 ** *Repository owner* – The GitHub organization or user that owns the repository.
 ** *Repository name* – This repository should have the folder structure and files described earlier in the <<Repository>> section.
-** *Source branch name* – This is the branch that CodePipeline should monitor for changes.
-** *Release branch name* – This is the branch that the source branch will be merged into after a successful test.
+** *Source branch name* – The branch that CodePipeline should monitor for changes.
+** *Release branch name* – The branch that the source branch will be merged into after a successful test.
 . https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html[Create an AWS Secrets Manager secret] for storing sensitive and/or deployment&#8209;specific input parameter override values for the {partner-product-short-name} tests. The name of this secret must match the name of the repository, and it must be created in the same Region as the {partner-product-mid-name}.
