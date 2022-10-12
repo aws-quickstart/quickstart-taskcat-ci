@@ -2,7 +2,11 @@
 
 == Postdeployment steps
 
-In the AWS CloudFormation console, go to the Outputs tab of your stack and click the link next to `URL`, which will load the new CI/CD pipeline running in the CodePipeline console, as shown in <<pipeline1>>.
+. Sign in to the https://us-east-1.console.aws.amazon.com/console/home?region=us-east-1#[AWS Management Console^] and open the CloudFormation console.
+. In the left navigation pane, choose *Stacks*.
+. On the *Stacks* page, choose the TaskCat CI/CD stack.
+. Choose the *Outputs* tab.
+. Choose the *URL* link to load the new CI/CD pipeline running in the CodePipeline console. <<pipeline1>> shows the pipeline running in the CodePipeline console.
 
 [#pipeline1]
 .CI/CD pipeline for the templates in your GitHub repository
