@@ -1,7 +1,7 @@
 :quickstart-project-name: quickstart-taskcat-ci
 :quickstart-github-org: aws-quickstart
-:partner-product-name: TaskCat CI/CD pipeline for AWS CloudFormation
-:partner-product-long-name: TaskCat continuous improvement/continuous deployment (CI/CD) pipeline for AWS CloudFormation
+:partner-product-name: TaskCat CI/CD Pipeline for AWS CloudFormation
+:partner-product-long-name: TaskCat continuous integration/continuous deployment (CI/CD) pipeline for AWS CloudFormation
 :partner-product-mid-name: TaskCat CI/CD pipeline
 :partner-product-short-name: TaskCat
 // :partner-company-name: Example Company Name, Ltd.

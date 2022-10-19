@@ -5,9 +5,9 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.17">
-<meta name="description" content="TaskCat CI/CD pipeline for AWS CloudFormation Deployment Guide on AWS">
-<meta name="keywords" content="Quick Start, AWS, TaskCat CI/CD pipeline for AWS CloudFormation">
-<title>TaskCat CI/CD pipeline for AWS CloudFormation on AWS</title>
+<meta name="description" content="TaskCat CI/CD Pipeline for AWS CloudFormation Deployment Guide on AWS">
+<meta name="keywords" content="Quick Start, AWS, TaskCat CI/CD Pipeline for AWS CloudFormation">
+<title>TaskCat CI/CD Pipeline for AWS CloudFormation on AWS</title>
 <style>
 /* Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
 /* Uncomment @import statement to use as custom stylesheet */
@@ -856,11 +856,7 @@ p.footer-text a{color:#d7d8d8}
 <ul class="sectlevel1">
 <li><a href="#_overview">Overview</a></li>
 <li><a href="#_costs_and_licenses">Costs and licenses</a></li>
-<li><a href="#_architecture">Architecture</a>
-<ul class="sectlevel2">
-<li><a href="#_pipeline_workflow">Pipeline workflow</a></li>
-</ul>
-</li>
+<li><a href="#_architecture">Architecture</a></li>
 <li><a href="#_deployment_options">Deployment options</a></li>
 <li><a href="#_predeployment_steps">Predeployment steps</a>
 <ul class="sectlevel2">
@@ -881,7 +877,7 @@ p.footer-text a{color:#d7d8d8}
 <div id="content">
 <div id="preamble">
 <div class="sectionbody">
-<h2 id="_taskcat_cicd_pipeline_for_aws_cloudformation_on_aws" class="discrete text-center">TaskCat CI/CD pipeline for AWS CloudFormation on AWS</h2>
+<h2 id="_taskcat_cicd_pipeline_for_aws_cloudformation_on_aws" class="discrete text-center">TaskCat CI/CD Pipeline for AWS CloudFormation on AWS</h2>
 <h2 id="_quick_start_deployment_guide" class="discrete text-left text-center">Quick Start Deployment Guide</h2>
 <div class="imageblock text-center">
 <div class="content">
@@ -918,10 +914,7 @@ Refer to the <a href="https://github.com/aws-quickstart/quickstart-taskcat-ci" t
 <h2 id="_overview">Overview</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This Partner Solution deploys a TaskCat continuous improvement/continuous deployment (CI/CD) pipeline for AWS CloudFormation on the AWS Cloud. This guide covers the steps necessary to deploy this Partner Solution.</p>
-</div>
-<div class="paragraph">
-<p>This AWS Solution deploys a TaskCat continuous improvement/continuous deployment (CI/CD) pipeline for AWS CloudFormation on the Amazon Web Services (AWS) Cloud. It is for users that want to automatically test and deploy CloudFormation templates in a GitHub repository. For more information, refer to the <a href="https://github.com/aws-quickstart/taskcat" target="_blank" rel="noopener">TaskCat repository on GitHub</a>.</p>
+<p>This AWS Solution deploys a TaskCat continuous integration/continuous deployment (CI/CD) pipeline for AWS CloudFormation on the Amazon Web Services (AWS) Cloud. It is for users that want to automatically test and deploy CloudFormation templates in a GitHub repository. For more information, refer to <a href="https://aws-ia.github.io/taskcat/" target="_blank" rel="noopener">What is TaskCat?</a>.</p>
 </div>
 </div>
 </div>
@@ -952,46 +945,31 @@ AWS Cloud.</p>
 <div class="ulist">
 <ul>
 <li>
-<p>CodePipeline to automate a CI/CD pipeline with source, build/test, and deploy stages.</p>
+<p>AWS CodePipeline to automate a CI/CD pipeline with source, build/test, and deploy stages.</p>
 </li>
 <li>
-<p>AWS CodeBuild to retrieve pipeline artifacts from an Amazon S3 bucket and run TaskCat.</p>
+<p>In the source stage, a Git user pushes a commit, which invokes CodePipeline. CodePipeline retrieves source code and stores it in an Amazon Simple Storage Service (Amazon S3) artifacts bucket.</p>
 </li>
 <li>
-<p>TaskCat to deploy and test CloudFormation templates and save a report of test results to an S3 bucket.</p>
+<p>In the build/test stage:</p>
+<div class="ulist">
+<ul>
+<li>
+<p>AWS CodeBuild retrieves code from an artifacts S3 bucket and runs TaskCat.</p>
 </li>
 <li>
-<p>AWS Secrets Manager to store credentials used by CodeBuild for Git access</p>
+<p>TaskCat deploys and tests CloudFormation templates and saves test results to a reports S3 bucket.</p>
 </li>
 <li>
-<p>Two S3 buckets, one for pipeline artifacts and another for TaskCat reports.</p>
-</li>
-<li>
-<p>An AWS Lambda function to merge tested code with the release branch in the GitHub repository.</p>
+<p>AWS Secrets Manager stores credentials used by CodeBuild for Git access.</p>
 </li>
 </ul>
 </div>
-<div class="sect2">
-<h3 id="_pipeline_workflow">Pipeline workflow</h3>
-<div class="paragraph">
-<p>The deployment of the CI/CD pipeline for AWS CloudFormation templates requires two branches in the GitHub repository: a source branch and a release branch. The source branch is actively used for development and needs to be tested for any code changes. The release branch contains the stable code that has been tested successfully.</p>
-</div>
-<div class="paragraph">
-<p>The CI/CD pipeline consists of three stages:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Source stage</strong>: When a commit is made into the source branch, it triggers the CI/CD pipeline. In the source stage of the pipeline, the entire contents of the GitHub repository are pulled, zipped, and stored in an S3 bucket. The successful completion of the source stage triggers the build/test stage.</p>
 </li>
 <li>
-<p><strong>Build/test stage</strong>: CodeBuild creates a Linux container, installs TaskCat and its dependencies in the container, downloads the zipped file that contains the source code from the S3 bucket, unpacks it, and runs tests using TaskCat. When the tests are completed, the report generated by TaskCat is uploaded to the S3 bucket. If the tests are successful, the deploy stage is triggered; otherwise, the build is marked as failed and the pipeline stops.</p>
+<p>In the deploy stage, a Lambda function merges tested code with the release branch in the GitHub repository.</p>
 </li>
-<li>
-<p><strong>Deploy stage</strong>: CodePipeline runs a Lambda function that merges the source branch of the GitHub repository into the release branch. The code is now ready to deploy from the GitHub repository. Additionally, you can use AWS CodeDeploy and/or add your own scripts to deploy your software post&#8209;merge.</p>
-</li>
-</ol>
-</div>
+</ul>
 </div>
 </div>
 </div>
@@ -1111,7 +1089,7 @@ Unless you are customizing the Quick Start templates for your own projects, don&
 <p>Choose <strong>Create stack</strong> to deploy the stack.</p>
 </li>
 <li>
-<p>Monitor the stack&#8217;s status, and when the status is <strong>CREATE_COMPLETE</strong>, the TaskCat CI/CD pipeline for AWS CloudFormation deployment is ready.</p>
+<p>Monitor the stack&#8217;s status, and when the status is <strong>CREATE_COMPLETE</strong>, the TaskCat CI/CD Pipeline for AWS CloudFormation deployment is ready.</p>
 </li>
 <li>
 <p>To view the created resources, choose the <strong>Outputs</strong> tab.</p>
