@@ -1,6 +1,7 @@
 project:
   name: quickstart-taskcat-ci
   owner: quickstart-eng@amazon.com
+  shorten_stack_name: true
   package_lambda: true
   lambda_source_path: functions/source
   lambda_zip_path: functions/packages
@@ -40,6 +41,6 @@ project:
     QSS3BucketName: $[taskcat_autobucket]
     QSS3BucketRegion: $[taskcat_current_region]
 tests:
-  defaults:
+  taskcat-ci:
     regions:
       - us-west-2
