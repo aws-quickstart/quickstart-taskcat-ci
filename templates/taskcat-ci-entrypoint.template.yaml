@@ -272,7 +272,7 @@ Resources:
                 - echo "Installing system dependencies..."
                 - apt-get -qy install zip gzip tar
                 - echo "Installing python dependencies..."
-                - pip3 -q install cfn-lint pre-commit taskcat yq
+                - pip3 -q install cfn-lint==0.66.1 pre-commit taskcat yq
                 - echo "Configuring taskcat..."
                 - |
                   cat << EOF > ~/.taskcat.yml
@@ -286,7 +286,7 @@ Resources:
                   minimum_pre_commit_version: 2.6.0
                   repos:
                     - repo: https://github.com/aws-quickstart/qs-cfn-lint-rules
-                      rev: c837d01eeaf047a908893254c13cb1e8e610668f
+                      rev: d4f788d6df2c62c763ecb1182ef9df623db538a2
                       hooks:
                         - id: qs-cfn-lint-wrapped
                           files: ^templates/.*
@@ -314,14 +314,6 @@ Resources:
                 - git remote add origin https://github.com/$PROJECT_OWNER/$PROJECT_NAME.git
                 - git fetch
                 - git checkout --force --track origin/$SOURCE_BRANCH
-                - |
-                  git config -f .gitmodules --get-regexp '^submodule\..*\.path$' |
-                    while read path_key path
-                    do
-                        url_key=$(echo $path_key | sed 's/\.path/.url/')
-                        url=$(git config -f .gitmodules --get "$url_key")
-                        git submodule add $url $path
-                    done
                 - git submodule init
                 - git submodule update --init --recursive
                 - echo "Creating TaskCat overrides file..."
